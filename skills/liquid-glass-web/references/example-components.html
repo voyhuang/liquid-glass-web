@@ -16,19 +16,15 @@
    re-deriving the material from memory loses those fixes.
 
    Layer model per glass pane (.lg):
-     1. ::before — translucent tint + backdrop-filter frost
-        (blur + saturate + brightness). Works in ALL browsers.
-     2. ::before (enhanced) — SVG feDisplacementMap refraction via
-        `backdrop-filter: url(#lg-dist)`. CHROMIUM ONLY (WebKit bug
-        245510), gated by JS adding `html.refract`
-        (see assets/refraction-snippet.html).
-     3. ::after — specular rim (inset shadows) + glossy sheen +
-        cursor-tracked spotlight that fades via @property.
+     1. ::before — translucent tint, saturation and brightness; no global blur.
+     2. ::before (enhanced) — per-pane edge refraction, local reflection blur,
+        dispersion and fade. Chromium enhancement; see refraction-snippet.html.
+     3. ::after — specular rim, sheen and cursor spotlight.
 
    Class map:
      .lg            base glass pane
-     .lg--thick     large surfaces (cards, modals): heavier frost/shadow
-     .lg--thin      small chrome (nav pills, docks): lighter frost/shadow
+     .lg--thick     large surfaces (cards, modals): heavier shadow
+     .lg--thin      small chrome (nav pills, docks): lighter shadow
      .lg-materialize  entrance animation; stagger with --enter-delay
      .lg-chip       NON-glass chip for use inside glass (no glass-on-glass)
      .lg-cta        accent-filled chip variant
@@ -40,7 +36,7 @@
 :root {
   color-scheme: light dark;
   /* material */
-  --lg-blur: 16px;          /* used by the Chromium refract path */
+  --lg-blur: 0px;          /* compatibility token; no whole-pane blur */
   --lg-sat: 1.8;
   --lg-bright: 1.08;
   --lg-radius: 26px;
@@ -134,7 +130,7 @@
   .lg:hover { --spot-a: var(--spot-max); }
 }
 
-/* Layer 1+2: tint + frost (universal); refraction override further down */
+/* Layer 1+2: tint (universal); refraction override further down */
 .lg::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
   /* concentric corners: inner radius = outer radius − 1px border,
@@ -143,13 +139,13 @@
   background: rgb(var(--lg-tint) / var(--lg-tint-a));
   /* values inlined (not var()) — Safari can drop backdrop-filter when the
      value list contains CSS variables */
-  -webkit-backdrop-filter: blur(16px) saturate(1.8) brightness(1.08);
-  backdrop-filter: blur(16px) saturate(1.8) brightness(1.08);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.08);
+  backdrop-filter: saturate(1.8) brightness(1.08);
 }
 
 /* Layer 3: specular rim + sheen + cursor spotlight.
    Inset speculars MUST live here: painted on the element itself they sit
-   under the frost layer (paint order) and disappear. */
+   under the material layer (paint order) and disappear. */
 .lg::after {
   content: ""; position: absolute; inset: 0; z-index: -1;
   border-radius: calc(var(--lg-radius) - 1px); pointer-events: none;
@@ -169,31 +165,25 @@
 }
 
 /* Refraction — added by JS only where SVG backdrop filters actually render
-   (Chromium; see refraction-snippet.html). Safari/Firefox keep the frosted
+   (Chromium; see refraction-snippet.html). Safari/Firefox keep the clear tinted
    layer above untouched. */
 html.refract .lg::before {
-  -webkit-backdrop-filter: url(#lg-dist) blur(calc(var(--lg-blur) * 0.3)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
-  backdrop-filter: url(#lg-dist) blur(calc(var(--lg-blur) * 0.3)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  -webkit-backdrop-filter: var(--lg-filter, saturate(1)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  backdrop-filter: var(--lg-filter, saturate(1)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
 }
 
-/* Squircle corners where supported (Chrome/Edge 139+); harmless elsewhere.
-   corner-shape does NOT inherit — it must be applied to the fill layers
-   as well, or their circular corners pull away from the squircle frame,
-   leaving a crescent-shaped gap at each corner. */
-@supports (corner-shape: squircle) {
-  .lg, .lg::before, .lg::after { corner-shape: squircle; }
-}
+/* Circular radii match the size-aware signed-distance refraction map. */
 
 /* Material weight hierarchy: bigger surfaces read thicker */
-.lg--thick { --lg-blur: 24px; }
+.lg--thick { --lg-blur: 0px; }
 .lg--thick::before {
-  -webkit-backdrop-filter: blur(24px) saturate(1.8) brightness(1.08);
-  backdrop-filter: blur(24px) saturate(1.8) brightness(1.08);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.08);
+  backdrop-filter: saturate(1.8) brightness(1.08);
 }
-.lg--thin { --lg-blur: 12px; box-shadow: var(--lg-shadow-sm); }
+.lg--thin { --lg-blur: 0px; box-shadow: var(--lg-shadow-sm); }
 .lg--thin::before {
-  -webkit-backdrop-filter: blur(12px) saturate(1.8) brightness(1.06);
-  backdrop-filter: blur(12px) saturate(1.8) brightness(1.06);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.06);
+  backdrop-filter: saturate(1.8) brightness(1.06);
 }
 
 /* Eased theme changes — no abrupt brightness jumps */
@@ -207,7 +197,7 @@ body, .lg-backdrop, .lg, .lg::before {
    CRITICAL: the animation must END with the filter removed (fill:
    backwards, no lingering `filter: blur(0)`) — ANY filter left on a
    glass element creates a new backdrop root and silently kills the
-   backdrop-filter frost forever. */
+   backdrop-filter effect. */
 @keyframes lg-materialize {
   0%   { opacity: 0; transform: translateY(12px) scale(0.97); filter: blur(16px); }
   60%  { filter: blur(2px); }
@@ -307,6 +297,22 @@ body, .lg-backdrop, .lg, .lg::before {
   .lg-chip { border-color: #ccc; background: #fff; color: #000; }
   .lg-cta { background: #fff; color: #000; border: 1px solid #999; }
 }
+
+/* Optional appearance popover: opaque, not another glass pane. */
+.lg-appearance {
+  position: fixed; inset: auto; margin: 0; z-index: 1000;
+  box-sizing: border-box; width: 280px; max-width: calc(100vw - 24px);
+  padding: 20px; border: 1px solid var(--hairline); border-radius: 18px;
+  background: var(--bg); color: var(--ink); box-shadow: var(--lg-shadow-sm);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+.lg-appearance h2 { font: 600 16px/1.4 system-ui, sans-serif; margin: 0 0 16px; }
+.lg-appearance .lg-theme-options { display: flex; gap: 8px; margin-bottom: 20px; }
+.lg-appearance .lg-chip { flex: 1; justify-content: center; min-height: 40px; }
+.lg-appearance [aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.lg-appearance label { display: block; font-weight: 600; }
+.lg-appearance input { display: block; width: 100%; min-height: 36px; margin: 8px 0 0; accent-color: var(--accent); }
+@media print { .lg-appearance, #themeToggle { display: none !important; } }
 
   </style>
   <style>
@@ -409,7 +415,7 @@ body, .lg-backdrop, .lg, .lg::before {
     <span class="brand">Material Lab</span>
     <a href="#gallery">Gallery</a>
     <a href="#dialogTitle">Dialog</a>
-    <button class="lg-chip" id="themeToggle" type="button" aria-label="Toggle color theme">◐</button>
+    <button class="lg-chip" id="themeToggle" type="button" aria-label="Appearance">◐</button>
   </nav>
 
   <main id="gallery">
@@ -440,52 +446,152 @@ body, .lg-backdrop, .lg, .lg::before {
     </form>
   </dialog>
 
-<!-- ============================================================
-  LIQUID GLASS — refraction snippet (paste before </body>)
-  Pairs with assets/glass.css. Copy verbatim.
-  Part 1: SVG displacement filter (turbulence-driven, size-agnostic,
-          with a slight RGB split for chromatic aberration).
-  Part 2: JS runtime gate — adds `refract` to <html> only where SVG
-          backdrop filters actually render (Chromium; WebKit bug 245510).
-          @supports parse-tests false-positive in Safari/Firefox, so the
-          supports check is paired with a Chromium-only API.
-  Part 3: JS cursor spotlight — 1:1 pointer tracking; the fade in/out is
-          handled in CSS via --spot-a, so there is NO pointerleave reset
-          (the spotlight dims in place instead of snapping away).
-  ============================================================ -->
-
-<!-- Part 1: refraction filter -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-  <defs>
-    <filter id="lg-dist" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
-      <feTurbulence type="fractalNoise" baseFrequency="0.007 0.007" numOctaves="2" seed="12" result="noise"/>
-      <feGaussianBlur in="noise" stdDeviation="2.5" result="map"/>
-      <feDisplacementMap in="SourceGraphic" in2="map" scale="38" xChannelSelector="R" yChannelSelector="G" result="dispR"/>
-      <feDisplacementMap in="SourceGraphic" in2="map" scale="45" xChannelSelector="R" yChannelSelector="G" result="dispG"/>
-      <feDisplacementMap in="SourceGraphic" in2="map" scale="52" xChannelSelector="R" yChannelSelector="G" result="dispB"/>
-      <feColorMatrix in="dispR" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="chR"/>
-      <feColorMatrix in="dispG" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="chG"/>
-      <feColorMatrix in="dispB" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="chB"/>
-      <feBlend in="chR" in2="chG" mode="screen" result="chRG"/>
-      <feBlend in="chRG" in2="chB" mode="screen"/>
-    </filter>
-  </defs>
-</svg>
-
+<!-- Liquid Glass Web v0.1.1 — copy verbatim before application scripts. -->
 <script>
-/* Part 2: refraction gate */
 (function () {
-  var canRefract = false;
-  try {
-    canRefract =
-      typeof CSS !== "undefined" &&
-      CSS.supports("backdrop-filter", "url(#lg-dist)") &&
-      "userAgentData" in navigator; // Chromium-only API
-  } catch (e) { canRefract = false; }
+'use strict';
+// Monotonically decreasing displacement, with a C2 join to the unaffected
+// interior. The Gaussian shoulder makes sourceDistance' locally negative:
+// this widens the reflected-looking fold without adding a duplicate image.
+// This is a visual approximation, not Apple's shader or a ray-traced lens.
+function sourceDistance(d) {
+ if (d >= 112) return d;
+ const t=d/112;
+ const envelope=1-t*t*t*(10+t*(-15+6*t));
+ const shoulder=Math.exp(-Math.pow(t/.22,2));
+ return d+112*envelope*(.4+.34*shoulder);
+}
+// The outer stationary point is the local reflection axis. Locate it from
+// the mapping instead of fixing it to the panel border or to text content.
+let reflectionAxis=0;
+for(let d=.1;d<112;d+=.1) {
+ if(sourceDistance(d+.01)<sourceDistance(d-.01)) reflectionAxis=d;
+}
+function reflectionWeight(d) {
+ // Keep the entire symmetric support inside the pane and the optical band.
+ const sigma=Math.min(22,reflectionAxis/3,(112-reflectionAxis)/3);
+ const delta=(d-reflectionAxis)/sigma;
+ if(Math.abs(delta)>=3) return 0;
+ const t=Math.abs(delta)/3;
+ const window=1-t*t*t*(10+t*(-15+6*t));
+ return .85*Math.exp(-.5*delta*delta)*window;
+}
+// A separate, compact edge treatment; zero before the reflection axis.
+function edgeWeight(d) {
+ const t=Math.min(1,Math.max(0,d/(10/.35)));
+ return 1-t*t*t*(10+t*(-15+6*t));
+}
+const svgNS = 'http://www.w3.org/2000/svg';
+function svgNode(name, attrs) { const el=document.createElementNS(svgNS,name); for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v); return el; }
 
-  if (canRefract) document.documentElement.classList.add("refract");
+const root=document.documentElement;
+const canRefract=CSS.supports('backdrop-filter','url(#lg-probe)') && 'userAgentData' in navigator;
+if(!canRefract) return;
+const svg=svgNode('svg',{width:0,height:0,'aria-hidden':'true',focusable:'false'});
+svg.style.position='absolute';
+const defs=svgNode('defs',{});svg.append(defs);document.body.append(svg);
+root.classList.add('refract');
+document.querySelectorAll('.lg').forEach((glass,index)=>{
+ const filterId='lg-dist-'+index;
+const filter = svgNode('filter',{id:filterId,filterUnits:'userSpaceOnUse',primitiveUnits:'userSpaceOnUse',x:0,y:0,'color-interpolation-filters':'sRGB'});
+const mapImage = svgNode('feImage',{x:0,y:0,preserveAspectRatio:'none',result:'edgeMap'});
+const edgeMaskImage=svgNode('feImage',{x:0,y:0,preserveAspectRatio:'none',result:'edgeMask'});
+const edgeFadeImage=svgNode('feImage',{x:0,y:0,preserveAspectRatio:'none',result:'edgeFadeMask'});
+// Convert 8-bit midpoint 128 to exactly 0.5, avoiding a center offset.
+const normalize = svgNode('feComponentTransfer',{in:'edgeMap',result:'map'});
+for (const channel of ['R','G']) normalize.append(svgNode('feFunc'+channel,{type:'linear',slope:255/254,intercept:-1/254}));
+const displacementScale=64;
+const displace = svgNode('feDisplacementMap',{in:'SourceGraphic',in2:'map',scale:displacementScale,xChannelSelector:'R',yChannelSelector:'G',result:'bent'});
+const reflectionBlur=svgNode('feGaussianBlur',{in:'ghostBundle',stdDeviation:'1.15',result:'softReflection'});
+const diffuseBlur=svgNode('feGaussianBlur',{in:'bent',stdDeviation:'2.8',result:'diffuseReflection'});
+// Narrow symmetric samples model a small spread of ray directions; no broad
+// low-frequency layer is mixed across the fold, so it cannot form a gray band.
+filter.append(mapImage,normalize,displace,
+ svgNode('feDisplacementMap',{in:'SourceGraphic',in2:'map',scale:62.8,xChannelSelector:'R',yChannelSelector:'G',result:'ghostNear'}),
+ svgNode('feDisplacementMap',{in:'SourceGraphic',in2:'map',scale:65.2,xChannelSelector:'R',yChannelSelector:'G',result:'ghostFar'}),
+ svgNode('feComposite',{in:'ghostNear',in2:'ghostFar',operator:'arithmetic',k1:0,k2:.5,k3:.5,k4:0,result:'ghostPair'}),
+ svgNode('feComposite',{in:'bent',in2:'ghostPair',operator:'arithmetic',k1:0,k2:.76,k3:.24,k4:0,result:'ghostBundle'}),
+ reflectionBlur,diffuseBlur,
+ svgNode('feColorMatrix',{in:'edgeMap',type:'matrix',values:'0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 1 0 0',result:'reflectionMask'}),
+ svgNode('feComposite',{in:'softReflection',in2:'reflectionMask',operator:'in',result:'fadedReflection'}),
+ svgNode('feComposite',{in:'bent',in2:'reflectionMask',operator:'out',result:'transmission'}),
+ svgNode('feComposite',{in:'fadedReflection',in2:'transmission',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0,result:'axisSoftened'}));
+// Tiny wavelength-dependent sample offsets along the SAME displacement map.
+// Channel summation (not screen blending) preserves neutral flat colors.
+for(const [name,scale,channel] of [['red',60,0],['green',64,1],['blue',68,2]]) {
+ const values=new Array(20).fill(0); values[channel*5+channel]=1; values[18]=1;
+ filter.append(svgNode('feDisplacementMap',{in:'SourceGraphic',in2:'map',scale,xChannelSelector:'R',yChannelSelector:'G',result:name+'Sample'}),
+  svgNode('feColorMatrix',{in:name+'Sample',type:'matrix',values:values.join(' '),result:name}));
+}
+filter.append(
+ svgNode('feComposite',{in:'red',in2:'green',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0,result:'rg'}),
+ svgNode('feComposite',{in:'rg',in2:'blue',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0,result:'dispersion'}),
+ svgNode('feGaussianBlur',{in:'dispersion',stdDeviation:'1.6',result:'softDispersion'}),
+ svgNode('feGaussianBlur',{in:'bent',stdDeviation:'18',result:'edgeWash'}),
+ svgNode('feComposite',{in:'softDispersion',in2:'diffuseReflection',operator:'arithmetic',k1:0,k2:.85,k3:.15,k4:0,result:'edgeFaded'}),
+ edgeMaskImage,
+ svgNode('feComposite',{in:'edgeFaded',in2:'edgeMask',operator:'in',result:'edgeDetail'}),
+ svgNode('feComposite',{in:'axisSoftened',in2:'edgeMask',operator:'out',result:'interior'}),
+ svgNode('feComposite',{in:'edgeDetail',in2:'interior',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0,result:'chromaticEdge'}),
+ edgeFadeImage,
+ svgNode('feComposite',{in:'edgeWash',in2:'edgeFadeMask',operator:'in',result:'washedEdge'}),
+ svgNode('feComposite',{in:'chromaticEdge',in2:'edgeFadeMask',operator:'out',result:'remainingEdge'}),
+ svgNode('feComposite',{in:'washedEdge',in2:'remainingEdge',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0}));
+defs.append(filter);
+// All blur radii share the optical band's size adaptation, including edge wash.
+const blurRadii=Array.from(filter.querySelectorAll('feGaussianBlur'),el=>[el,Number(el.getAttribute('stdDeviation'))]);
+glass.style.setProperty('--lg-filter','url(#'+filterId+')');
+
+function updateMap() {
+ const w=glass.clientWidth,h=glass.clientHeight;
+ if (!w || !h) return; // Closed dialogs are initialized when they become visible.
+ const radius=Math.min(parseFloat(getComputedStyle(glass,'::before').borderTopLeftRadius),w/2,h/2);
+ // Each edge owns at most 22% of the shortest dimension. Opposite bands
+ // stay separated by an unaffected center; large surfaces retain 39.2px.
+ const opticalScale=Math.min(1,.22*Math.min(w,h)/39.2);
+ const unit=.35*opticalScale;
+ const sheet=false;
+ const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
+ const context=canvas.getContext('2d'); const pixels=context.createImageData(w,h);
+ const edgePixels=context.createImageData(w,h);
+ const fadePixels=context.createImageData(w,h);
+ for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
+  const px=x+.5-w/2, py=y+.5-h/2;
+  const qx=Math.abs(px)-(w/2-radius), qy=Math.abs(py)-(h/2-radius);
+  const ox=Math.max(qx,0),oy=Math.max(qy,0), len=Math.hypot(ox,oy);
+  const distance=sheet ? h-y-.5 : -(len+Math.min(Math.max(qx,qy),0)-radius);
+  let nx=0,ny=0;
+  // A notification sheet has one visible horizontal optical edge.
+  // Its offscreen top and viewport sides must not act as a second lens.
+  if(sheet) ny=-1;
+  else if(len>0) { nx=-Math.sign(px)*ox/len; ny=-Math.sign(py)*oy/len; }
+  else if(qx>qy) nx=-Math.sign(px); else ny=-Math.sign(py);
+  const d=Math.max(0,distance)/unit;
+  const shift=(sourceDistance(d)-d)*unit;
+  const index=(y*w+x)*4;
+  pixels.data[index]=Math.round(128+nx*shift/displacementScale*254);
+  pixels.data[index+1]=Math.round(128+ny*shift/displacementScale*254);
+  pixels.data[index+2]=Math.round(255*reflectionWeight(d)); pixels.data[index+3]=255;
+  edgePixels.data[index]=255; edgePixels.data[index+1]=255; edgePixels.data[index+2]=255;
+  edgePixels.data[index+3]=Math.round(255*edgeWeight(d));
+  // The colored fringe develops first; only the last few pixels lose detail.
+  fadePixels.data[index]=255; fadePixels.data[index+1]=255; fadePixels.data[index+2]=255;
+  fadePixels.data[index+3]=Math.round(255*.95*Math.pow(edgeWeight(d),3));
+ }
+ context.putImageData(pixels,0,0);
+ for (const el of [filter,mapImage,edgeMaskImage,edgeFadeImage]) { el.setAttribute('width',w); el.setAttribute('height',h); }
+ mapImage.setAttribute('href',canvas.toDataURL());
+ context.putImageData(edgePixels,0,0);
+ edgeMaskImage.setAttribute('href',canvas.toDataURL());
+ context.putImageData(fadePixels,0,0);
+ edgeFadeImage.setAttribute('href',canvas.toDataURL());
+ for(const [el,radius] of blurRadii) el.setAttribute('stdDeviation',String(radius*opticalScale));
+
+}
+
+ new ResizeObserver(updateMap).observe(glass);
+});
 })();
-
 /* Part 3: cursor spotlight (1:1, direct manipulation) */
 (function () {
   var fine = matchMedia("(hover: hover) and (pointer: fine)").matches;
@@ -503,19 +609,47 @@ body, .lg-backdrop, .lg, .lg::before {
   });
 })();
 
-/* Optional: dark/light toggle — wire any button with id="themeToggle".
-   Theme changes cross-fade via the transitions in glass.css. */
+
+
+/* Optional appearance menu. Omit #themeToggle to omit the entire component. */
 (function () {
-  var root = document.documentElement;
-  var btn = document.getElementById("themeToggle");
-  if (!btn) return;
-  btn.addEventListener("click", function () {
-    var current =
-      root.dataset.theme ||
-      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    root.dataset.theme = current === "dark" ? "light" : "dark";
-  });
+ const root=document.documentElement, button=document.getElementById('themeToggle');
+ if(!button) return;
+ const zh=document.documentElement.lang.startsWith('zh');
+ const title=zh?'外观设置':'Appearance', light=zh?'浅色':'Light', dark=zh?'深色':'Dark';
+ const label=zh?'玻璃透明度':'Glass transparency';
+ button.setAttribute('aria-label',title);
+ button.setAttribute('aria-controls','lgAppearance');
+ button.setAttribute('aria-expanded','false');
+ const panel=document.createElement('section');
+ panel.id='lgAppearance'; panel.className='lg-appearance'; panel.setAttribute('popover','auto');
+ panel.setAttribute('aria-label',title);
+ panel.innerHTML='<h2>'+title+'</h2><div class="lg-theme-options"><button type="button" class="lg-chip" data-lg-theme="light">'+light+'</button><button type="button" class="lg-chip" data-lg-theme="dark">'+dark+'</button></div><label for="lgTransparency">'+label+'</label><input id="lgTransparency" type="range" min="40" max="80" value="48">';
+ document.body.append(panel);
+ const slider=panel.querySelector('input');
+ let customized=false;
+ function syncTheme(){
+   const theme=root.dataset.theme || (matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+   panel.querySelectorAll('[data-lg-theme]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lgTheme===theme)));
+   if(!customized) slider.value=Math.round((1-parseFloat(getComputedStyle(root).getPropertyValue('--lg-tint-a')))*100);
+ }
+ syncTheme();
+ function place(){
+   const r=button.getBoundingClientRect();
+   panel.style.left=Math.max(12,Math.min(innerWidth-panel.offsetWidth-12,r.right-panel.offsetWidth))+'px';
+   panel.style.top=Math.max(12,Math.min(innerHeight-panel.offsetHeight-12,r.bottom+10))+'px';
+ }
+ button.addEventListener('click',()=>{panel.togglePopover();if(panel.matches(':popover-open'))place();});
+ panel.addEventListener('toggle',()=>button.setAttribute('aria-expanded',String(panel.matches(':popover-open'))));
+ panel.querySelectorAll('[data-lg-theme]').forEach(b=>b.addEventListener('click',()=>{root.dataset.theme=b.dataset.lgTheme;syncTheme();}));
+ slider.addEventListener('input',()=>{customized=true;root.style.setProperty('--lg-tint-a',String(1-Number(slider.value)/100));});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape' && panel.matches(':popover-open')){panel.hidePopover();button.focus();e.preventDefault();}});
+ panel.addEventListener('focusout',e=>{if(e.relatedTarget && !panel.contains(e.relatedTarget) && e.relatedTarget!==button)panel.hidePopover();});
+ window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))place();});
+ document.addEventListener('scroll',()=>{if(panel.matches(':popover-open'))place();},true);
+ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',syncTheme);
 })();
+
 </script>
 
   <script>

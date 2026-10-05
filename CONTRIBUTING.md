@@ -1,22 +1,20 @@
 # Contributing
 
-Keep this repository static and self-contained: no runtime dependency, package
+Keep this repository static and self-contained: no runtime dependency, npm
 publication, CDN, web font, Plugin manifest, or build requirement.
 
-- Prefer design-token overrides or example-only CSS over material changes.
-- Keep each example offline-capable and at five `.lg` panes or fewer.
-- Edit the four HTML examples directly; the repository has no generator.
-- Keep `README.md` and `README.zh-CN.md` aligned.
+- Prefer design-token overrides over changes to the optical profile.
+- Keep all four examples offline-capable and at five panes or fewer per view.
+- Keep English and Chinese README sections aligned.
+- When changing canonical CSS or the snippet, update every embedded example.
+- Preserve clear centers, edge-local processing, and the shared size scaling.
+- Verify theme/menu controls, dialog opening, unique filter IDs, responsive
+  sizes, and relevant accessibility/print behavior.
 
-Changes to `glass.css` or `refraction-snippet.html` must explain the compatibility
-reason, update their hashes in `SKILL.md` and both READMEs, update every embedded
-example, and include browser and accessibility evidence.
-
-Validate the skill structure when Codex's local validator is available:
+Validate the installable skill with Codex's local validator when available:
 
 ```sh
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/liquid-glass-web
 ```
 
-By contributing, you agree that your contribution is licensed under the MIT
-License in this repository.
+Contributions are licensed under this repository's MIT License.

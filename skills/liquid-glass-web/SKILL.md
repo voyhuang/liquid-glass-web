@@ -1,187 +1,122 @@
 ---
 name: liquid-glass-web
-description: Recreate Apple's Liquid Glass (iOS 26 / macOS Tahoe) material on HTML web pages — translucent frosted panels with edge refraction, specular rim lighting, a cursor-tracked spotlight, materialize entrances, and full accessibility fallbacks. Use this skill whenever the user mentions liquid glass, glassmorphism, frosted glass, translucent or glassy UI, iOS 26 / Apple-style panels, backdrop-filter effects, or wants any card, navbar, dock, button, modal, or page to look like glass — even if they never name the effect. Also use it when reviewing or debugging an existing glass implementation (corner gaps, blur that disappears, harsh highlights, Safari/Firefox fallback issues).
+description: Build Liquid Glass web interfaces with size-aware edge refraction, soft folded reflections, local dispersion, clear centers, specular lighting, and accessible fallbacks. Use for liquid glass, glassmorphism, translucent navigation, cards, dialogs, media controls, and debugging glass edges or browser fallbacks.
 ---
 
-# Liquid Glass for the Web
+# Liquid Glass Web · v0.1.1
 
-Build a faithful Liquid Glass material from CSS and SVG. The baseline is
-frosted glass in browsers with `backdrop-filter`; SVG displacement refraction
-is a progressive Chromium enhancement. Solid surfaces cover accessibility and
-print fallbacks.
+Use the bundled CSS and SVG/JavaScript together. The approved material has a
+clear center: no whole-pane Gaussian blur. Chromium receives edge refraction;
+other browsers retain translucent tint, rim lighting, and color adjustment.
+This is an independent visual approximation, not Apple's shader.
 
-## Fidelity contract
+## Fidelity and workflow
 
-This skill reconstructs one tuned material. Do not recreate it from memory.
+1. Inspect the existing layout and preserve content, semantics, and application logic.
+2. Copy `assets/glass.css` verbatim; place page-specific CSS after it.
+3. Apply `.lg` only to floating controls or compact surfaces. Use `.lg-chip`
+   inside panes; do not stack glass on glass. Keep at most five panes per view.
+4. Copy `assets/refraction-snippet.html` verbatim near the end of `body`,
+   before application-specific scripts. Use it once per document.
+5. Customize documented tokens, not the optical curves. Each existing pane gets
+   a unique filter and a size-dependent map. ResizeObserver refreshes maps when
+   dimensions change, including when a closed dialog opens; scrolling does not
+   rebuild maps. Panes added later need initialization by the host application;
+   this snippet intentionally has no MutationObserver or public module API.
+6. Test the relevant examples, theme/menu controls, responsive sizes, and
+   accessibility settings after changes.
 
-1. Copy `assets/glass.css` verbatim. For a single-file deliverable, inline the
-   complete file in one `<style>` block.
-2. Copy `assets/refraction-snippet.html` verbatim near the end of `<body>`,
-   before any application-specific scripts and the closing `</body>`.
-3. Add page-specific CSS after the canonical stylesheet. Customize only the
-   documented design tokens; do not rewrite the layer structure or material
-   values.
-4. Do not rename `.lg*` classes. They are the public interface.
-5. Use a bundled example as the starting point when it matches the request.
+## References
 
-The canonical asset hashes for this release are:
-
-- `assets/glass.css`: `98e07bd1b012bb0b020e50fb423c0e2d65190a9b6263f8e851ccbfafd0a7bdb4`
-- `assets/refraction-snippet.html`: `7c33def72b231ecb1d009fdf4ef937fa7d637abf0a6e72dcf284260ee46c0351`
-
-## Choose the smallest useful reference
-
-| Request | Start with |
+| Need | Reference |
 |---|---|
-| Add one faithful glass surface | `references/example-quick-start.html` |
-| Build or compare UI components | `references/example-components.html` |
-| Make a compact interactive widget | `references/example-music-player.html` |
-| Build a responsive portfolio or résumé | `references/example-resume.html` |
-| Copy exact component markup only | `references/components.md` |
+| Small complete page | `references/example-quick-start.html` |
+| Nav, chips, card, standalone button, dialog | `references/example-components.html` |
+| Interactive player | `references/example-music-player.html` |
+| Portfolio, sticky navigation, print | `references/example-resume.html` |
+| Component markup | `references/components.md` |
 
-Read only the reference that matches the task, then retain the canonical CSS
-and snippet without edits.
+All four HTML examples work offline and embed both canonical assets exactly.
+Use the closest example, keeping its embedded assets unchanged.
 
-## Decide whether glass belongs
+## Material behavior
 
-Use glass for floating navigation and control surfaces: nav pills, docks,
-toolbars, compact cards, dialogs, media players, and standalone primary CTAs.
+- Shape: circular rounded rectangles and pills. Frame and pseudo-elements must
+  share concentric radii. Do not add `corner-shape: squircle`: the optical map
+  models circular corners, not superellipses.
+- Refraction acts normal to every edge; normals turn continuously around corners.
+  The main band is `min(39.2px, 22% of the shorter pane dimension)`.
+- Five-degree falloff plus a near-edge Gaussian shoulder produces stretching,
+  compression, and a folded image. Do not replace this with turbulence.
+- The reflection axis uses symmetric weak ghost samples and local blur, not a
+  broad low-contrast strip.
+- Color dispersion and near-disappearance occupy the last 10px on large panes.
+  All bands, displacement amplitudes, and blur radii scale together on small
+  panes. Opposing bands do not meet in the center.
+- There is no global backdrop blur. Keep the independent background decoration
+  blur and temporary entrance animation distinct from material blur.
 
-Do not use glass for an entire page background, long-form reading surfaces,
-dense tables, repeated form fields, or every content section. A short card may
-contain ordinary text, but long body content should remain on a stable surface.
-Never stack glass on glass. Controls inside a pane use `.lg-chip` and `.lg-cta`,
-which are translucent but deliberately unblurred.
+## Public classes and tokens
 
-Keep each viewport to 3–5 glass panes. Use fewer when one pane can establish
-the hierarchy. Every pane adds backdrop compositing cost.
-
-## Implementation workflow
-
-1. Inspect the existing page and count the proposed panes. Preserve its content,
-   semantics, layout constraints, and build system.
-2. Add the complete canonical stylesheet, linked or inlined.
-3. Give the material something to refract: the optional `.lg-backdrop`, existing
-   imagery, or colorful content. Glass over a flat background reads as a pale box.
-4. Assign material weight:
-   - large surface: `class="lg lg--thick lg-materialize"`
-   - small chrome: `class="lg lg--thin lg-materialize"`
-   - controls inside glass: `class="lg-chip"` or `class="lg-chip lg-cta"`
-5. Stagger entrances with `--enter-delay` only when multiple panes arrive
-   together. Keep the existing animation implementation intact.
-6. Add the canonical snippet near the end of `<body>`, then put
-   application-specific scripts after it before closing `</body>`. This keeps
-   the snippet auditable and verbatim.
-7. Test the enhanced path, every fallback rung, keyboard operation, zoom, print,
-   and console output before delivery.
-
-## Public classes
-
-| Class | Role |
+| Interface | Meaning |
 |---|---|
-| `.lg` | Base pane and three-layer material stack |
-| `.lg--thick` | Large card or dialog; 24px frost and deep shadow |
-| `.lg--thin` | Nav, dock, or small floating control; 12px frost |
-| `.lg-materialize` | Tuned entrance; stagger with `--enter-delay` |
-| `.lg-chip` | Unblurred control for use inside a pane |
-| `.lg-cta` | Accent-filled `.lg-chip` variant |
-| `.lg-backdrop` | Optional animated color field behind glass |
+| `.lg` | Base pane with tint, refraction, and specular layers |
+| `.lg--thick` / `.lg--thin` | Surface hierarchy/shadow; neither adds global blur |
+| `.lg-materialize` | Entrance with `--enter-delay`; no persistent final filter |
+| `.lg-chip` / `.lg-cta` | Non-glass controls / accent variant |
+| `.lg-backdrop` | Optional decorative animated color field |
+| `--lg-radius` | 26px default; 999px for pills |
+| `--lg-tint` / `--lg-tint-a` | Theme color channels / opacity |
+| `--lg-sat` / `--lg-bright` | Color adjustment, defaults 1.8 / 1.08 |
+| `--lg-shadow` / `--lg-shadow-sm` | Large / small surface shadows |
+| `--sheen-a` / `--spot-max` | Sheen / cursor spotlight |
+| `--bg`, `--ink`, `--ink-dim`, `--hairline` | Theme content colors |
+| `--accent` / `--accent-ink` | Focus and CTA colors |
+| `--lg-blur` | Legacy token retained at 0px; no longer controls material blur |
 
-`.lg` alone is the supported medium-weight surface. The `.lg--thick` and
-`.lg--thin` modifiers are optional hierarchy choices.
+`--lg-filter`, `--mx`, `--my`, and `--spot-a` are runtime state.
+Preserve all other existing color and decoration tokens in the stylesheet.
 
-## Design tokens
+## Optional appearance menu
 
-Change tokens in a page-level override; do not edit the material declarations.
+Add one button with `id="themeToggle"`, `type="button"`, and an accessible
+appearance label. The snippet creates an opaque, top-layer popover: clicking
+opens the menu without changing theme. It contains Light/Dark controls and a
+40–80% glass-transparency slider, with no displayed number or helper sentence.
 
-| Token | Pinned default | Safe use |
-|---|---|---|
-| `--lg-blur` | 16px; thick 24px; thin 12px | Chromium refraction path only |
-| `--lg-sat` / `--lg-bright` | 1.8 / 1.08 | Preserve color behind blur |
-| `--lg-radius` | 26px | Use 999px for pills |
-| `--bg`, `--ink`, `--ink-dim`, `--hairline` | Theme-specific | Page, text, secondary text, separators |
-| `--lg-tint` / `--lg-tint-a` | Theme-specific | Adjust tint and opacity together |
-| `--lg-shadow` / `--lg-shadow-sm` | See asset | Large versus floating depth |
-| `--sheen-a` | 0.40 light / 0.16 dark | Diagonal sheen strength |
-| `--spot-max` | 0.25 light / 0.14 dark | Cursor spotlight peak |
-| `--accent` / `--accent-ink` | Theme-specific | CTA and focus colors |
+The slider changes only tint alpha, not foreground opacity or optical effects.
+A custom value survives theme changes within the page, but is not persisted
+across reloads. Reduced transparency, contrast, forced colors, and print rules
+override tint adjustments. Escape closes the menu and restores trigger focus;
+outside clicks dismiss it. Omit the trigger to omit the menu.
 
-The SVG displacement scales `38 / 45 / 52` create the RGB split. They are
-material parameters, not design tokens; leave them unchanged.
+## Browser and accessibility boundaries
 
-## Layer model
+The v0.1.1 policy retains the conservative Chromium gate
+(`CSS.supports` plus `navigator.userAgentData`). It is a rendering policy,
+not a claim that other engines can never gain support. Safari/Firefox use the
+clear tinted fallback; no JavaScript also retains the static material.
+Recheck browser support before claiming current engine capabilities.
 
-| Layer | Location | Function |
-|---|---|---|
-| Tint and frost | `.lg::before` | Translucent fill plus blur, saturation, brightness |
-| Refraction | `html.refract .lg::before` | SVG displacement and chromatic split in Chromium |
-| Specular response | `.lg::after` | Inset rim, diagonal sheen, cursor spotlight |
+Native popovers are required for the optional appearance menu. Do not restore
+the v0.1.0 frost fallback or a refraction-status badge. System preference support
+varies; retain all existing media-query overrides and visible keyboard focus.
 
-Keep the pseudo-element order and negative stacking unchanged. The specular
-insets must live on `::after`; placing them on `.lg` hides them beneath frost.
+## Troubleshooting
 
-## Browser and accessibility ladder
+- Missing refraction: inspect the browser gate, generated per-pane filter IDs,
+  hidden/zero-size panes, and ancestor backdrop roots.
+- Effect vanishes after entrance: ensure the animation's final filter is removed.
+- Corner mismatch: preserve concentric circular radii; do not mix squircle frames
+  with circular optical maps.
+- Muddy center: remove added whole-pane blur; check tint and background content.
+- Thin panels look overprocessed: ensure every local blur uses the same optical
+  size ratio as its displacement map, rather than a fixed large-pixel radius.
+- Slow scroll: reduce pane count; avoid rebuilding maps on pointer or scroll events.
 
-Compatibility notes were verified on 2026-07-31. Browser behavior is
-time-sensitive: recheck upstream status before presenting this table as current.
+## Validation
 
-| Capability | Chromium | Safari / WebKit | Firefox |
-|---|---|---|---|
-| Frost baseline | Yes | Yes, with `-webkit-` declaration | Yes |
-| SVG filter in `backdrop-filter` | Enhanced path | Fallback; WebKit bug 245510 | Fallback |
-| `corner-shape: squircle` | Chrome/Edge 139+ | Not enabled | Not enabled |
-| `prefers-reduced-transparency` | Limited support | Limited support | Limited support |
-
-Fallback order: refraction → frost → solid fill. The solid rung is activated by
-reduced transparency, increased contrast, forced colors, and print rules already
-present in `glass.css`.
-
-WebKit tracking: bug 245510 remains open and repair PR 68614 remains unmerged at
-the verification date. Do not gate refraction with `@supports`; Safari can parse
-the syntax without rendering the effect. The canonical snippet pairs
-`CSS.supports` with a Chromium-only runtime signal.
-
-## Motion, focus, and contrast
-
-- Keep `lg-materialize` on the pane itself. Its `backwards` fill mode removes
-  `filter` after the animation so frost remains functional.
-- Never leave `filter`, `transform`, `opacity < 1`, or `will-change` on a pane or
-  an ancestor after entrance; each can create a new backdrop root.
-- Under `prefers-reduced-motion`, movement is removed while short color feedback
-  remains.
-- Every interactive control needs a visible `:focus-visible` state and an
-  accessible name. A symbol-only button always needs `aria-label`.
-- Text on glass uses `--ink` or `--ink-dim`; do not substitute low-opacity gray.
-- Use sticky chrome instead of fixed glass on iOS to avoid repaint jank.
-
-## Debug in this order
-
-1. **Frost disappears after entrance:** inspect computed `filter`, `transform`,
-   `opacity`, and ancestors. Restore the canonical animation.
-2. **Crescent gaps in Chromium corners:** apply `corner-shape` to `.lg`,
-   `.lg::before`, and `.lg::after` together, as the asset does.
-3. **Thin gap around the fill:** keep inner radius at
-   `calc(var(--lg-radius) - 1px)`.
-4. **No frost in Safari:** preserve both prefixed and unprefixed declarations;
-   do not put variables in the universal filter value list.
-5. **The `refract` class is present but the effect is absent:** confirm the
-   canonical runtime gate and verify Chromium rather than trusting syntax
-   support alone.
-6. **Glass looks muddy or invisible:** add meaningful content behind it before
-   raising tint or blur.
-7. **Scroll is janky:** reduce pane count, remove fixed glass, and inspect ancestor
-   compositing layers.
-
-## Delivery checklist
-
-- [ ] Canonical files are present verbatim; hashes still match.
-- [ ] No glass-on-glass and no more than five `.lg` panes per viewport.
-- [ ] Chromium adds `html.refract`; Safari/Firefox retain the frost-only path.
-- [ ] After entrances finish, `.lg::before` retains a non-`none`
-      `backdrop-filter` except in an intentional solid fallback.
-- [ ] Light and dark themes preserve readable contrast.
-- [ ] Keyboard, focus, 200% zoom, reduced motion, reduced transparency,
-      increased contrast, forced colors, and print all remain usable.
-- [ ] All controls have accessible names; axe has no serious or critical issues.
-- [ ] Console has no errors, scroll remains smooth, and remote dependencies are
-      absent when the deliverable must work offline.
+Check exact asset embedding, offline operation, distinct per-pane filters,
+dialog opening, clear centers, edge behavior on small/large panes, menu keyboard
+operation, both themes, reduced motion/transparency, contrast, forced colors,
+and print. Browser rendering checks do not prove Apple-equivalent optics.

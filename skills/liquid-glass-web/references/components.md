@@ -30,7 +30,7 @@ For complete pages, choose one self-contained example:
   <span style="font-weight: 700; margin-right: auto;">Brand</span>
   <a href="#a">Section</a>
   <a href="#b">Section</a>
-  <button class="lg-chip" id="themeToggle" aria-label="Toggle color theme">◐</button>
+  <button class="lg-chip" id="themeToggle" type="button" aria-label="Appearance">◐</button>
 </nav>
 ```
 
@@ -99,3 +99,10 @@ real status.
   <!-- paste assets/refraction-snippet.html -->
 </body>
 ```
+
+## Appearance menu
+
+The optional `#themeToggle` button opens a native popover with Light/Dark buttons
+and a 40–80% tint-transparency slider. The snippet supplies its markup and
+behavior; do not add a second theme click handler. No numerical readout or
+helper sentence is shown. Omit the trigger to omit the menu.

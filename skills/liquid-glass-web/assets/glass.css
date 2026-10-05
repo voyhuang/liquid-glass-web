@@ -7,19 +7,15 @@
    re-deriving the material from memory loses those fixes.
 
    Layer model per glass pane (.lg):
-     1. ::before — translucent tint + backdrop-filter frost
-        (blur + saturate + brightness). Works in ALL browsers.
-     2. ::before (enhanced) — SVG feDisplacementMap refraction via
-        `backdrop-filter: url(#lg-dist)`. CHROMIUM ONLY (WebKit bug
-        245510), gated by JS adding `html.refract`
-        (see assets/refraction-snippet.html).
-     3. ::after — specular rim (inset shadows) + glossy sheen +
-        cursor-tracked spotlight that fades via @property.
+     1. ::before — translucent tint, saturation and brightness; no global blur.
+     2. ::before (enhanced) — per-pane edge refraction, local reflection blur,
+        dispersion and fade. Chromium enhancement; see refraction-snippet.html.
+     3. ::after — specular rim, sheen and cursor spotlight.
 
    Class map:
      .lg            base glass pane
-     .lg--thick     large surfaces (cards, modals): heavier frost/shadow
-     .lg--thin      small chrome (nav pills, docks): lighter frost/shadow
+     .lg--thick     large surfaces (cards, modals): heavier shadow
+     .lg--thin      small chrome (nav pills, docks): lighter shadow
      .lg-materialize  entrance animation; stagger with --enter-delay
      .lg-chip       NON-glass chip for use inside glass (no glass-on-glass)
      .lg-cta        accent-filled chip variant
@@ -31,7 +27,7 @@
 :root {
   color-scheme: light dark;
   /* material */
-  --lg-blur: 16px;          /* used by the Chromium refract path */
+  --lg-blur: 0px;          /* compatibility token; no whole-pane blur */
   --lg-sat: 1.8;
   --lg-bright: 1.08;
   --lg-radius: 26px;
@@ -125,7 +121,7 @@
   .lg:hover { --spot-a: var(--spot-max); }
 }
 
-/* Layer 1+2: tint + frost (universal); refraction override further down */
+/* Layer 1+2: tint (universal); refraction override further down */
 .lg::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
   /* concentric corners: inner radius = outer radius − 1px border,
@@ -134,13 +130,13 @@
   background: rgb(var(--lg-tint) / var(--lg-tint-a));
   /* values inlined (not var()) — Safari can drop backdrop-filter when the
      value list contains CSS variables */
-  -webkit-backdrop-filter: blur(16px) saturate(1.8) brightness(1.08);
-  backdrop-filter: blur(16px) saturate(1.8) brightness(1.08);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.08);
+  backdrop-filter: saturate(1.8) brightness(1.08);
 }
 
 /* Layer 3: specular rim + sheen + cursor spotlight.
    Inset speculars MUST live here: painted on the element itself they sit
-   under the frost layer (paint order) and disappear. */
+   under the material layer (paint order) and disappear. */
 .lg::after {
   content: ""; position: absolute; inset: 0; z-index: -1;
   border-radius: calc(var(--lg-radius) - 1px); pointer-events: none;
@@ -160,31 +156,25 @@
 }
 
 /* Refraction — added by JS only where SVG backdrop filters actually render
-   (Chromium; see refraction-snippet.html). Safari/Firefox keep the frosted
+   (Chromium; see refraction-snippet.html). Safari/Firefox keep the clear tinted
    layer above untouched. */
 html.refract .lg::before {
-  -webkit-backdrop-filter: url(#lg-dist) blur(calc(var(--lg-blur) * 0.3)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
-  backdrop-filter: url(#lg-dist) blur(calc(var(--lg-blur) * 0.3)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  -webkit-backdrop-filter: var(--lg-filter, saturate(1)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
+  backdrop-filter: var(--lg-filter, saturate(1)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
 }
 
-/* Squircle corners where supported (Chrome/Edge 139+); harmless elsewhere.
-   corner-shape does NOT inherit — it must be applied to the fill layers
-   as well, or their circular corners pull away from the squircle frame,
-   leaving a crescent-shaped gap at each corner. */
-@supports (corner-shape: squircle) {
-  .lg, .lg::before, .lg::after { corner-shape: squircle; }
-}
+/* Circular radii match the size-aware signed-distance refraction map. */
 
 /* Material weight hierarchy: bigger surfaces read thicker */
-.lg--thick { --lg-blur: 24px; }
+.lg--thick { --lg-blur: 0px; }
 .lg--thick::before {
-  -webkit-backdrop-filter: blur(24px) saturate(1.8) brightness(1.08);
-  backdrop-filter: blur(24px) saturate(1.8) brightness(1.08);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.08);
+  backdrop-filter: saturate(1.8) brightness(1.08);
 }
-.lg--thin { --lg-blur: 12px; box-shadow: var(--lg-shadow-sm); }
+.lg--thin { --lg-blur: 0px; box-shadow: var(--lg-shadow-sm); }
 .lg--thin::before {
-  -webkit-backdrop-filter: blur(12px) saturate(1.8) brightness(1.06);
-  backdrop-filter: blur(12px) saturate(1.8) brightness(1.06);
+  -webkit-backdrop-filter: saturate(1.8) brightness(1.06);
+  backdrop-filter: saturate(1.8) brightness(1.06);
 }
 
 /* Eased theme changes — no abrupt brightness jumps */
@@ -198,7 +188,7 @@ body, .lg-backdrop, .lg, .lg::before {
    CRITICAL: the animation must END with the filter removed (fill:
    backwards, no lingering `filter: blur(0)`) — ANY filter left on a
    glass element creates a new backdrop root and silently kills the
-   backdrop-filter frost forever. */
+   backdrop-filter effect. */
 @keyframes lg-materialize {
   0%   { opacity: 0; transform: translateY(12px) scale(0.97); filter: blur(16px); }
   60%  { filter: blur(2px); }
@@ -298,3 +288,19 @@ body, .lg-backdrop, .lg, .lg::before {
   .lg-chip { border-color: #ccc; background: #fff; color: #000; }
   .lg-cta { background: #fff; color: #000; border: 1px solid #999; }
 }
+
+/* Optional appearance popover: opaque, not another glass pane. */
+.lg-appearance {
+  position: fixed; inset: auto; margin: 0; z-index: 1000;
+  box-sizing: border-box; width: 280px; max-width: calc(100vw - 24px);
+  padding: 20px; border: 1px solid var(--hairline); border-radius: 18px;
+  background: var(--bg); color: var(--ink); box-shadow: var(--lg-shadow-sm);
+  font: 14px/1.5 system-ui, sans-serif;
+}
+.lg-appearance h2 { font: 600 16px/1.4 system-ui, sans-serif; margin: 0 0 16px; }
+.lg-appearance .lg-theme-options { display: flex; gap: 8px; margin-bottom: 20px; }
+.lg-appearance .lg-chip { flex: 1; justify-content: center; min-height: 40px; }
+.lg-appearance [aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.lg-appearance label { display: block; font-weight: 600; }
+.lg-appearance input { display: block; width: 100%; min-height: 36px; margin: 8px 0 0; accent-color: var(--accent); }
+@media print { .lg-appearance, #themeToggle { display: none !important; } }

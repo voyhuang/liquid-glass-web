@@ -1,258 +1,142 @@
 # Liquid Glass Web
 
-[English](README.md) · [在线演示](https://voyhuang.github.io/liquid-glass-web/) · [案例](#案例) · [安装](#为-codex-安装)
+[English](README.md) · [在线案例](https://voyhuang.github.io/liquid-glass-web/) · [安装](#安装)
 
-一个面向 Codex、符合 [Agent Skills 规范](https://agentskills.io/specification)
-的 Liquid Glass 网页实现技能。目录结构遵循
-[OpenAI Skills 指南](https://developers.openai.com/plugins/build/skills)，但按设计
-保持为独立 skill。它把一套锁定的 CSS 材质、一个 SVG/JavaScript 运行时片段、
-实施指南和四个自包含案例封装在一起。
-
-这套材质包含半透明着色、背景磨砂、镜面边缘光、跟随光标的高光，以及仅在
-Chromium 启用的位移折射。Safari、Firefox、系统无障碍偏好、强制色彩和打印
-都有明确降级，不会得到残缺的近似效果。
-
-> 预览版本：`v0.1.0`。这是独立 skill，不是 Codex Plugin，也不是 npm 包。
-> 中英文文档保持同一结构；如技术表述出现差异，以英文 README 为准。
+面向 Codex、符合 [Agent Skills 规范](https://agentskills.io/specification)的独立
+Liquid Glass 网页技能。**v0.1.1** 提供按尺寸适配的边缘折射、柔和倒影、局部色散，
+玻璃中央不使用整体高斯模糊。不发布 npm 包或 Plugin，不依赖 CDN，没有构建步骤。
+中英文说明保持对应，技术表述以英文为准。
 
 ## 效果预览
 
-[打开 GitHub Pages 在线演示](https://voyhuang.github.io/liquid-glass-web/)。
-静态首页直接链接到可安装 skill 内的四个自包含 HTML 案例。
+[打开四个案例](https://voyhuang.github.io/liquid-glass-web/)。
+Pages 直接展示随 skill 一起安装的单文件 HTML 案例。
 
-![Liquid Glass Web 效果预览](docs/preview.png)
+## v0.1.1 更新
 
-## 包含内容
+- 用边缘距离驱动的折射替代整片随机噪声扭曲。
+- 四边及圆角使用同一套光学曲线。
+- 小型面板的位移、倒影模糊、色散与渐隐共同缩放；大面板保留 39.2px
+  形变带及 10px 贴边处理范围。
+- 倒影采用轻微对称重影与局部模糊。
+- 移除整体玻璃模糊，非 Chromium 降级也不保留整体磨砂。
+- 外观按钮展开明暗切换和 40%–80% 底色透明度滑块，不显示数值或说明句。
 
-```text
-skills/liquid-glass-web/
-├── SKILL.md
-├── agents/openai.yaml
-├── assets/
-│   ├── glass.css
-│   └── refraction-snippet.html
-└── references/
-    ├── components.md
-    ├── example-quick-start.html
-    ├── example-components.html
-    ├── example-music-player.html
-    └── example-resume.html
-```
+## 安装
 
-技能目录完全自包含，可以直接从 GitHub 子路径安装。仓库根目录只保留文档和
-GitHub Pages 静态案例索引；没有 package 或构建步骤。
-
-## 为 Codex 安装
-
-让 Codex 安装锁定版本：
+让 Codex 执行：
 
 ```text
-Use $skill-installer to install https://github.com/voyhuang/liquid-glass-web/tree/v0.1.0/skills/liquid-glass-web
+Use $skill-installer to install https://github.com/voyhuang/liquid-glass-web/tree/v0.1.1/skills/liquid-glass-web
 ```
 
-若希望跟随 `main`，把 `v0.1.0` 换成 `main`。如果技能没有立即出现在列表中，
-重启 Codex。安装后可显式调用：
+把 `v0.1.1` 换成 `main` 可跟随开发分支。技能未立即出现时重启 Codex，
+使用 `$liquid-glass-web` 调用。
 
-```text
-Use $liquid-glass-web to apply the canonical Liquid Glass material to this web interface.
-```
-
-需要严格复现时，建议显式调用。技能描述也支持 Codex 在 liquid glass、
-glassmorphism、磨砂面板及相关调试请求中自动选择它。
-
-## 手动安装
+手动安装：
 
 ```sh
-git clone --depth 1 --branch v0.1.0 https://github.com/voyhuang/liquid-glass-web.git
+git clone --depth 1 --branch v0.1.1 https://github.com/voyhuang/liquid-glass-web.git
 mkdir -p ~/.codex/skills
 cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 ```
 
-若本机有 Codex 校验器，可验证安装结构：
-
-```sh
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py ~/.codex/skills/liquid-glass-web
-```
-
-本仓库不会主动覆盖或替换已有本机技能；如果目标目录已经存在，请先检查再复制。
+复制命令假定目标目录不存在。替换已有安装前先备份。安装的是 skill 子目录，
+不是仓库根目录。
 
 ## 快速使用
 
-制作自包含 HTML 页面时：
-
-1. 把 [`glass.css`](skills/liquid-glass-web/assets/glass.css) 完整复制到一个
-   `<style>` 元素中。
-2. 只在少量浮动界面上添加 `.lg`；材质厚度类按需选择。
-3. 把
-   [`refraction-snippet.html`](skills/liquid-glass-web/assets/refraction-snippet.html)
-   完整复制到 `<body>` 末尾附近。
-4. 页面专属 CSS 放在 canonical 样式之后；业务脚本放在 canonical snippet 之后，
-   最后再关闭 `</body>`。
+1. 将 [glass.css](skills/liquid-glass-web/assets/glass.css) 完整内嵌到样式块。
+2. 给少量浮动表面添加 `.lg`，内部控件使用 `.lg-chip`。
+3. 将 [refraction-snippet.html](skills/liquid-glass-web/assets/refraction-snippet.html)
+   完整复制一次到 body 末尾、业务脚本之前。
+4. 页面专属 CSS 放在 canonical 样式之后。
 
 ```html
 <article class="lg lg--thick lg-materialize">
-  <h1>One clear surface</h1>
-  <p>Controls inside glass use unblurred chips.</p>
-  <button class="lg-chip lg-cta" type="button">Continue</button>
+  <h1>A clear surface</h1>
+  <button id="themeToggle" class="lg-chip" type="button"
+          aria-label="Appearance">◐</button>
 </article>
 ```
 
-最小完整参考是
-[`example-quick-start.html`](skills/liquid-glass-web/references/example-quick-start.html)。
-不要凭记忆重写材质声明：两项 canonical 资产均已锁定。
+可选的 `themeToggle` 按钮会创建外观弹出面板，点击时不立即切换主题。
+滑块只改变底色 alpha；用户调节值在主题切换后保留，刷新后不保留。
+不添加按钮就不生成菜单。
 
-| Canonical 资产 | SHA-256 |
+## 类名与 token
+
+| 接口 | 用途 |
 |---|---|
-| `glass.css` | `98e07bd1b012bb0b020e50fb423c0e2d65190a9b6263f8e851ccbfafd0a7bdb4` |
-| `refraction-snippet.html` | `7c33def72b231ecb1d009fdf4ef937fa7d637abf0a6e72dcf284260ee46c0351` |
+| `.lg` | 底色、尺寸适配边缘光学、边缘光与光标高光 |
+| `.lg--thick`、`.lg--thin` | 层级与阴影，不是模糊强度 |
+| `.lg-materialize` | 入场；通过 `--enter-delay` 错峰 |
+| `.lg-chip`、`.lg-cta` | 非玻璃控件及强调色变体 |
+| `.lg-backdrop` | 可选动画背景 |
+| `--lg-radius` | 圆形圆角；默认 26px，胶囊用 999px |
+| `--lg-tint`、`--lg-tint-a` | 底色通道与不透明度 |
+| `--lg-sat`、`--lg-bright` | 饱和度与亮度 |
+| `--lg-shadow`、`--lg-shadow-sm` | 表面阴影 |
+| `--sheen-a`、`--spot-max` | 光泽与光标高光 |
+| `--bg`、`--ink`、`--ink-dim`、`--accent` | 主题颜色 |
+| `--lg-blur` | 兼容保留的旧 token，默认 0px，不影响材质 |
 
-## 公开类名
-
-以下类名是 `v0.1.0` 的稳定公开接口。
-
-| 类名 | 用途 |
-|---|---|
-| `.lg` | 基础 pane 与三层材质结构 |
-| `.lg--thick` | 大卡片和 dialog；更重的磨砂与阴影 |
-| `.lg--thin` | 导航、dock 和小型浮动控件 |
-| `.lg-materialize` | 调校后的入场；用 `--enter-delay` 错峰 |
-| `.lg-chip` | glass 内部使用的不模糊 chip / button |
-| `.lg-cta` | 强调色 `.lg-chip` 变体 |
-| `.lg-backdrop` | 可选的 glass 后方动画色场 |
-
-不要 glass 套 glass。`.lg` 内部控件应使用 `.lg-chip`，而不是另一个 `.lg`。
-每个视图最多五个 glass pane。`.lg` 单独使用就是受支持的中等厚度表面；
-`.lg--thick` 和 `.lg--thin` 是可选的层级修饰类。
-
-## 设计 token
-
-请在 canonical 样式之后覆盖 token，不要改材质层规则。注明主题的默认值会随明暗
-主题变化。
-
-| Token | 默认值 / 作用 |
-|---|---|
-| `--lg-blur` | `16px`；thick 为 `24px`，thin 为 `12px` |
-| `--lg-sat`, `--lg-bright` | `1.8`, `1.08`；补偿模糊后的色彩 |
-| `--lg-radius` | `26px`；pill 使用 `999px` |
-| `--bg`, `--ink`, `--ink-dim`, `--hairline` | 页面、主文字、次文字和分隔线 |
-| `--lg-tint`, `--lg-tint-a` | 主题着色通道与 alpha |
-| `--lg-border`, `--lg-spec` | 外边线与镜面边缘颜色 |
-| `--lg-shadow`, `--lg-shadow-sm` | 大表面与浮动 chrome 的层次 |
-| `--sheen-a`, `--spot-max` | 对角 sheen 与光标 spotlight 强度 |
-| `--chip-bg`, `--chip-border` | 不模糊控件的处理 |
-| `--accent`, `--accent-ink` | CTA、焦点和状态颜色 |
-| `--solid` | 无障碍 / 打印所用的近乎不透明表面 |
-| `--hue-a` … `--hue-d` | 可选背景色 |
-| `--blob-opacity` | 可选背景强度 |
-| `--enter-delay` | 每个 pane 的 materialize 延迟，默认 `0s` |
-
-`--mx`、`--my` 和 `--spot-a` 是 spotlight 的运行时状态，不是设计输入。
-SVG 位移尺度 `38 / 45 / 52` 是锁定的材质参数。
+在资产之后覆盖 token，不重写材质规则。运行时 filter ID 与 `--lg-filter`
+属于内部状态。圆形圆角与光学贴图配套；不要单独改成 squircle。
 
 ## 案例
 
-每个案例都是可离线直接打开的单文件 HTML，逐字内嵌 canonical 样式和 snippet，
-并遵守最多五个 pane 的限制。
-
-| 案例 | 展示内容 | 在线打开 |
+| 案例 | 内容 | 在线 |
 |---|---|---|
-| [Quick Start](skills/liquid-glass-web/references/example-quick-start.html) | 最小 nav、hero、主题和降级 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-quick-start.html) |
-| [Component Gallery](skills/liquid-glass-web/references/example-components.html) | nav、card、chip、独立 CTA、dialog | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-components.html) |
-| [Music Player](skills/liquid-glass-web/references/example-music-player.html) | 语义化 transport/progress 与独立业务脚本 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-music-player.html) |
-| [Résumé / Portfolio](skills/liquid-glass-web/references/example-resume.html) | 响应式五 pane 布局与打印 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-resume.html) |
+| [Quick Start](skills/liquid-glass-web/references/example-quick-start.html) | 最小导航栏与卡片 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-quick-start.html) |
+| [Components](skills/liquid-glass-web/references/example-components.html) | 导航、卡片、chip、独立 CTA、dialog | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-components.html) |
+| [Music Player](skills/liquid-glass-web/references/example-music-player.html) | 播放演示与进度控件 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-music-player.html) |
+| [Résumé / Portfolio](skills/liquid-glass-web/references/example-resume.html) | 吸顶导航、响应式布局、打印 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-resume.html) |
 
-直接编辑这些 HTML 文件即可。GitHub Pages 发布的就是同一批已追踪文件，因此
-在线预览与安装后的 skill 不会发生漂移。
+四个案例均逐字内嵌 canonical CSS 和 snippet，可离线打开。
+调校期间使用的光学小样不作为第五个公开案例发布。
 
-## 浏览器支持与降级阶梯
+## 浏览器降级
 
-核验日期：2026-07-31。支持状态会变化。
+v0.1.1 的实现策略（2026-10-06）：通过保守运行时检查，让 Chromium 使用 SVG
+背景折射。Safari/Firefox 保留半透明底色与边缘光，**不使用整体模糊**。
+这是实现策略，不代表新一轮跨引擎认证；浏览器能力会变化。可选外观菜单使用
+原生 popover。
 
-| 能力 | Chromium | Safari / WebKit | Firefox |
-|---|---|---|---|
-| 磨砂（`backdrop-filter`） | 支持 | 通过前缀与标准声明支持 | 支持 |
-| `backdrop-filter` 中的 SVG 折射 | 增强路径 | 磨砂 fallback | 磨砂 fallback |
-| `corner-shape: squircle` | Chrome/Edge 139+ | 未启用 | 未启用 |
-| `prefers-reduced-transparency` | 有限 / 实验性 | 有限 / 实验性 | 有限 / 实验性 |
+降级阶梯为：**边缘折射 → 清晰半透明表面 → 无障碍实色表面**。
+降低透明度、提高对比度、强制色彩和打印样式覆盖材质；媒体查询支持因浏览器而异。
 
-运行时阶梯是：**折射 → 磨砂 → 实色填充**。降低透明度、提高对比度、强制色彩
-和打印所需的实色降级已经写入 canonical CSS。
+## 无障碍与性能
 
-Safari 继续走磨砂路径，因为在核验日期，
-[WebKit bug 245510](https://bugs.webkit.org/show_bug.cgi?id=245510) 仍为开放状态，
-[WebKit PR #68614](https://github.com/WebKit/WebKit/pull/68614) 仍未合并。
-不能只依赖 `@supports`：WebKit 可能能解析 `backdrop-filter: url(...)`，却不能
-真正渲染。canonical snippet 因此使用保守的 Chromium 运行时检查。Firefox 同样
-暂不把 SVG URL filter 应用于 backdrop filter，因此保留相同的磨砂 baseline。
+每视图不超过五个 pane，避免玻璃套玻璃。保留可见焦点、控件名称和繁忙背景上的
+文字对比度。菜单支持 Escape、点击外部关闭，滑块保留原生键盘操作。
 
-## 无障碍与性能规则
-
-- glass 用于浮动导航/控制层、小型卡片、dialog 和聚焦组件；不要用于长文、密集
-  表格或所有 section。
-- 一个视图最多五个 `.lg` pane；每一个都会增加 backdrop 合成工作。
-- iOS 持续悬浮 chrome 使用 `position: sticky`，不要使用 fixed glass。
-- 只有符号的按钮必须有可访问名称，并保留 canonical `:focus-visible` 轮廓。
-- 在最繁忙背景上测试明暗主题文本；使用 `--ink` 或 `--ink-dim`，不要用低透明灰。
-- reduced motion 下停止位移，但保留短暂颜色反馈。
-- 200% 缩放与 320 CSS 像素视口下，控件和内容必须重排，不能裁切或横向滚动。
-- 打印时应变为不透明白色表面，没有动画、模糊或装饰 blob。
-
-发布变更前，应在本地打开四个案例，检查明暗主题、键盘焦点、窄屏、reduced
-motion、打印和相关浏览器降级。
+贴图随面板尺寸变化更新，不在滚动或光标移动时重建。每个面板有独立滤镜，
+隐藏 dialog 在显示后初始化。每侧光学范围最多占最短边的 22%，避免相向边缘
+挤占中央。减少动态效果时停止装饰动画，打印时表面实色化。
 
 ## 常见故障
 
-### 入场后磨砂消失
+- **没有折射：** 检查浏览器门控、filter ID、面板尺寸和祖先元素。
+- **入场后效果消失：** 去掉持续保留的最终 `filter`，保留 canonical
+  动画的 `backwards` 填充方式。
+- **圆角有缝：** 保持同心圆形圆角。
+- **中央浑浊：** 移除额外整体模糊，检查底色透明度。
+- **小控件效果过重：** 确保所有光学半径共同缩放。
+- **滚动卡顿：** 减少面板和不必要的合成层。
 
-检查 pane 和祖先是否遗留 `filter`、`transform`、`opacity < 1` 或
-`will-change`。这些属性可能创建新的 backdrop root。保留 canonical
-`lg-materialize` 动画及其 `backwards` fill mode。
-
-### Chromium 圆角出现月牙缝
-
-`corner-shape` 不继承，必须像 `glass.css` 一样同时应用在 `.lg`、
-`.lg::before` 和 `.lg::after`。内圆角保持
-`calc(var(--lg-radius) - 1px)` 的同心关系。
-
-### Safari 没有磨砂
-
-同时保留 `-webkit-backdrop-filter` 与 `backdrop-filter`。通用 Safari filter
-值列表不要使用 CSS 变量；canonical 样式有意在这里写死字面量。
-
-### Glass 发白或浑浊
-
-先在 pane 后方加入有意义的色彩或图像。在背景没有可折射内容之前，不要靠提高
-blur 或 tint 补偿。
-
-### 滚动变慢
-
-减少 pane 数量，用 sticky chrome 替换 fixed glass，移除无用合成提示，并检查
-祖先 filter/transform。
-
-## 验证
-
-仓库没有构建步骤，直接编辑 skill 与案例。若本机有 Codex 校验器，可检查可安装
-目录：
+## 验证与贡献
 
 ```sh
 python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/liquid-glass-web
 ```
 
-随后在本地打开四个案例，人工检查与改动相关的浏览器、无障碍、打印和响应式表现。
-
-## 贡献
-
-提交 PR 前请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。修改 canonical 资产必须是
-明确的兼容性决策，同时更新哈希、案例并提供浏览器证据。大多数视觉调整应该只
-覆盖设计 token 或页面专属 CSS。
-
-文档的理想测试很简单：一个不了解仓库背景的读者，应该能独立说明如何安装、哪些
-内容可以定制、Safari 为什么不同，以及如何排查 frost 丢失。
+检查相关浏览器、键盘、响应式、无障碍与打印行为。参见
+[CONTRIBUTING.md](CONTRIBUTING.md)。资产变更需同步四个案例和两份 README。
+仓库没有构建流水线。
 
 ## 许可与声明
 
-使用 [MIT License](LICENSE) 发布。
-
-这是独立、非官方实现，与 Apple Inc. 没有关联，也未获得其认可或赞助。
-“Liquid Glass”、iOS、macOS 及相关产品名仅作描述使用。本项目不包含 Apple 的
-代码、美术或专有资产。
+[MIT](LICENSE)。独立非官方实现，与 Apple 无关联，未获其认可。
+不包含 Apple 代码或专有美术资产。光学曲线是视觉近似，不是苹果 shader，
+也不是物理精确模拟。
