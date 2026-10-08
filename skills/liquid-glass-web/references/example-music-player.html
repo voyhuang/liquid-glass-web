@@ -18,15 +18,17 @@
    Layer model per glass pane (.lg):
      1. ::before — translucent tint, saturation and brightness; no global blur.
      2. ::before (enhanced) — per-pane edge refraction, local reflection blur,
-        dispersion and fade. Chromium enhancement; see refraction-snippet.html.
+        dispersion and fade. Native Chromium path; Safari uses a source layer.
      3. ::after — specular rim, sheen and cursor spotlight.
 
    Class map:
      .lg            base glass pane
      .lg--thick     large surfaces (cards, modals): heavier shadow
      .lg--thin      small chrome (nav pills, docks): lighter shadow
+     .lg--lite      bottom-layer content: lighting and tint
+     .lg--overlay   shared selection: fixed 90% transparency
      .lg-materialize  entrance animation; stagger with --enter-delay
-     .lg-chip       NON-glass chip for use inside glass (no glass-on-glass)
+     .lg-chip       ordinary control for use inside glass
      .lg-cta        accent-filled chip variant
      .lg-backdrop   optional colorful blob backdrop (glass needs something
                     to refract; skip if the page has its own imagery)
@@ -37,8 +39,9 @@
   color-scheme: light dark;
   /* material */
   --lg-blur: 0px;          /* compatibility token; no whole-pane blur */
-  --lg-sat: 1.8;
-  --lg-bright: 1.08;
+  --lg-sat: 1;
+  --lg-bright: 1;
+  --lg-border-width: 0.5px;
   --lg-radius: 26px;
   /* backdrop hues (blobs / accents) */
   --hue-a: #7c5cff;
@@ -51,7 +54,7 @@
   --ink-dim: rgba(16, 19, 28, 0.74);      /* vibrancy: not flat gray */
   --hairline: rgba(16, 19, 28, 0.12);
   --lg-tint: 255 255 255;
-  --lg-tint-a: 0.52;
+  --lg-tint-a: 0.60;
   --lg-border: rgba(255, 255, 255, 0.65);
   --lg-spec: rgba(255, 255, 255, 0.95);
   --lg-shadow: 0 24px 60px rgba(24, 30, 70, 0.20);      /* thick surfaces */
@@ -70,10 +73,10 @@
   --ink: #f2f4fa;
   --ink-dim: rgba(242, 244, 250, 0.72);
   --hairline: rgba(255, 255, 255, 0.12);
-  --lg-tint: 16 18 30;
-  --lg-tint-a: 0.44;
-  --lg-border: rgba(255, 255, 255, 0.16);
-  --lg-spec: rgba(255, 255, 255, 0.45);
+  --lg-tint: 18 18 18;
+  --lg-tint-a: 0.60;
+  --lg-border: rgba(255, 255, 255, 0.10);
+  --lg-spec: rgba(255, 255, 255, 0.20);
   --lg-shadow: 0 24px 60px rgba(0, 0, 0, 0.60);
   --lg-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.45);
   --sheen-a: 0.16;
@@ -92,10 +95,10 @@
     --ink: #f2f4fa;
     --ink-dim: rgba(242, 244, 250, 0.72);
     --hairline: rgba(255, 255, 255, 0.12);
-    --lg-tint: 16 18 30;
-    --lg-tint-a: 0.44;
-    --lg-border: rgba(255, 255, 255, 0.16);
-    --lg-spec: rgba(255, 255, 255, 0.45);
+    --lg-tint: 18 18 18;
+    --lg-tint-a: 0.60;
+    --lg-border: rgba(255, 255, 255, 0.10);
+    --lg-spec: rgba(255, 255, 255, 0.20);
     --lg-shadow: 0 24px 60px rgba(0, 0, 0, 0.60);
     --lg-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.45);
     --sheen-a: 0.16;
@@ -110,6 +113,8 @@
 }
 
 /* ---------- The material ---------- */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 /* Cursor spotlight strength — registered so hover can FADE it in and out
    smoothly; browsers without @property simply switch it instantly. */
 @property --spot-a {
@@ -122,7 +127,7 @@
   position: relative;
   isolation: isolate;               /* contain the pseudo-element stack */
   border-radius: var(--lg-radius);
-  border: 1px solid var(--lg-border);
+  border: var(--lg-border-width) solid var(--lg-border);
   box-shadow: var(--lg-shadow);
   --spot-a: 0;
 }
@@ -133,14 +138,14 @@
 /* Layer 1+2: tint (universal); refraction override further down */
 .lg::before {
   content: ""; position: absolute; inset: 0; z-index: -1;
-  /* concentric corners: inner radius = outer radius − 1px border,
+  /* concentric corners: inner radius = outer radius − border width,
      otherwise the fill pulls away from the frame at the corners */
-  border-radius: calc(var(--lg-radius) - 1px);
+  border-radius: calc(var(--lg-radius) - var(--lg-border-width));
   background: rgb(var(--lg-tint) / var(--lg-tint-a));
   /* values inlined (not var()) — Safari can drop backdrop-filter when the
      value list contains CSS variables */
-  -webkit-backdrop-filter: saturate(1.8) brightness(1.08);
-  backdrop-filter: saturate(1.8) brightness(1.08);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* Layer 3: specular rim + sheen + cursor spotlight.
@@ -148,7 +153,7 @@
    under the material layer (paint order) and disappear. */
 .lg::after {
   content: ""; position: absolute; inset: 0; z-index: -1;
-  border-radius: calc(var(--lg-radius) - 1px); pointer-events: none;
+  border-radius: calc(var(--lg-radius) - var(--lg-border-width)); pointer-events: none;
   box-shadow:
     inset 0 1px 1px var(--lg-spec),
     inset 0 -1px 1px rgba(255, 255, 255, 0.22),
@@ -164,10 +169,8 @@
       rgba(255, 255, 255, 0.04) 32%, transparent 60%);
 }
 
-/* Refraction — added by JS only where SVG backdrop filters actually render
-   (Chromium; see refraction-snippet.html). Safari/Firefox keep the clear tinted
-   layer above untouched. */
-html.refract .lg::before {
+/* Native SVG backdrop path. Safari's source layer uses the same filter. */
+html.refract .lg:not(.lg--lite)::before {
   -webkit-backdrop-filter: var(--lg-filter, saturate(1)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
   backdrop-filter: var(--lg-filter, saturate(1)) saturate(var(--lg-sat)) brightness(var(--lg-bright));
 }
@@ -176,15 +179,13 @@ html.refract .lg::before {
 
 /* Material weight hierarchy: bigger surfaces read thicker */
 .lg--thick { --lg-blur: 0px; }
-.lg--thick::before {
-  -webkit-backdrop-filter: saturate(1.8) brightness(1.08);
-  backdrop-filter: saturate(1.8) brightness(1.08);
-}
 .lg--thin { --lg-blur: 0px; box-shadow: var(--lg-shadow-sm); }
-.lg--thin::before {
-  -webkit-backdrop-filter: saturate(1.8) brightness(1.06);
-  backdrop-filter: saturate(1.8) brightness(1.06);
-}
+.lg--overlay { --lg-tint-a: 0.1; }
+.lg-mirrored { transform: translateZ(0); }
+.lg-mirror { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; z-index: -2; pointer-events: none; }
+.lg-mirror-surface { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.lg-mirror-input { position: absolute; inset: 0; overflow: hidden; }
+.lg-mirror-surface * { pointer-events: none !important; }
 
 /* Eased theme changes — no abrupt brightness jumps */
 body, .lg-backdrop, .lg, .lg::before {
@@ -208,7 +209,7 @@ body, .lg-backdrop, .lg, .lg::before {
   animation-delay: var(--enter-delay, 0s);   /* stagger: .14s, .22s, .30s… */
 }
 
-/* ---------- Chips (deliberately NOT glass: no glass-on-glass) ---------- */
+/* ---------- Regular chips ---------- */
 .lg-chip {
   display: inline-flex; align-items: center; gap: 0.5em;
   padding: 0.48em 0.95em; border-radius: 999px;
@@ -287,10 +288,12 @@ body, .lg-backdrop, .lg, .lg::before {
 
 /* ---------- Print: flatten the material cleanly ---------- */
 @media print {
+  :root { --ink: #000 !important; --ink-dim: #333 !important; --bg: #fff !important; }
+  .lg, .lg *, .lg::before, .lg::after { transition: none !important; }
   .lg-backdrop { display: none !important; }
-  body { background: #fff; color: #000; }
+  body { background: #fff !important; color: #000 !important; }
   .lg-materialize { animation: none !important; }
-  .lg { border: 1px solid #ddd; border-radius: 10px; box-shadow: none; }
+  .lg { border: 1px solid #ddd; border-radius: 10px; box-shadow: none !important; color: #000; }
   .lg::before, html.refract .lg::before,
   .lg--thick::before, .lg--thin::before { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
   .lg::after { display: none; }
@@ -299,6 +302,12 @@ body, .lg-backdrop, .lg, .lg::before {
 }
 
 /* Optional appearance popover: opaque, not another glass pane. */
+.lg-nav-items { position: relative; display: flex; gap: 8px; padding: 6px; border-radius: 999px; }
+.lg-nav-items a { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 8px 16px; border-radius: 999px; color: var(--ink); text-decoration: none; white-space: nowrap; }
+.lg-nav-items a[aria-current] { font-weight: 750; }
+.lg-nav-items a:focus-visible { position: relative; z-index: 4; }
+.lg-selection { position: absolute; left: 0; top: 0; z-index: 2; --lg-radius: 999px; touch-action: none; cursor: grab; }
+.lg-selection:active { cursor: grabbing; }
 .lg-appearance {
   position: fixed; inset: auto; margin: 0; z-index: 1000;
   box-sizing: border-box; width: 280px; max-width: calc(100vw - 24px);
@@ -314,7 +323,19 @@ body, .lg-backdrop, .lg, .lg::before {
 .lg-appearance input { display: block; width: 100%; min-height: 36px; margin: 8px 0 0; accent-color: var(--accent); }
 @media print { .lg-appearance, #themeToggle { display: none !important; } }
 
-  </style>
+/* Accessibility overrides also cover enhanced selectors and visual copies. */
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
+  .lg-mirror { display: none; }
+  html.refract .lg:not(.lg--lite)::before { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  html.refract .lg:not(.lg--lite)::before { background: Canvas; }
+}
+@media print {
+  .lg-mirror { display: none !important; }
+  html.refract .lg:not(.lg--lite)::before { background: #fff; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+</style>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body {
@@ -380,13 +401,17 @@ body, .lg-backdrop, .lg, .lg::before {
       .player { width: 22rem; }
     }
   </style>
+  <style>
+    .lg-backdrop { background: radial-gradient(ellipse at 20% 20%, #8d80d955, transparent 60%), radial-gradient(ellipse at 85% 65%, #39cbdc44, transparent 55%), var(--bg); }
+    .lg-backdrop span { display: none; }
+  </style>
 </head>
 <body>
-  <div class="lg-backdrop" aria-hidden="true">
+  <div id="page-backdrop" class="lg-backdrop" aria-hidden="true">
     <span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span>
   </div>
 
-  <main class="lg lg--thick lg-materialize player" style="--enter-delay: 0.1s;" aria-labelledby="trackTitle">
+  <main class="lg lg--thick player" data-lg-source="#page-backdrop" aria-labelledby="trackTitle">
     <div class="art" aria-hidden="true"></div>
     <div class="meta">
       <h1 id="trackTitle">Cathedrals of Light</h1>
@@ -412,7 +437,7 @@ body, .lg-backdrop, .lg, .lg::before {
     </div>
   </main>
 
-<!-- Liquid Glass Web v0.1.1 — copy verbatim before application scripts. -->
+<!-- Liquid Glass Web v0.1.2 — copy verbatim before application scripts. -->
 <script>
 (function () {
 'use strict';
@@ -450,14 +475,93 @@ function edgeWeight(d) {
 const svgNS = 'http://www.w3.org/2000/svg';
 function svgNode(name, attrs) { const el=document.createElementNS(svgNS,name); for (const [k,v] of Object.entries(attrs)) el.setAttribute(k,v); return el; }
 
+/* Bounded, inert visual source for Safari. */
+function installGlassMirror(glass, prefix) {
+  const source=document.querySelector(glass.dataset.lgSource);
+  if (!source || source.contains(glass)) throw new Error('Glass source must exist outside its pane');
+  const clip=document.createElement('div');clip.className='lg-mirror';
+  clip.setAttribute('aria-hidden','true');clip.inert=true;
+  const surface=document.createElement('div');surface.className='lg-mirror-surface';
+  surface.style.filter='var(--lg-filter)';
+  const input=document.createElement('div');input.className='lg-mirror-input';
+  surface.append(input);
+  clip.append(surface);glass.prepend(clip);
+  const backdrop=document.querySelector('.lg-backdrop');
+  const backing=document.createElement('div');
+  Object.assign(backing.style,{position:'absolute',pointerEvents:'none'});
+  let copy;
+  function sync(){
+    const a=source.getBoundingClientRect(), b=input.getBoundingClientRect();
+    copy.style.left=(a.left-b.left)+'px';
+    copy.style.top=(a.top-b.top)+'px';
+    if(backdrop){
+      const r=backdrop.getBoundingClientRect();
+      Object.assign(backing.style,{left:(r.left-b.left)+'px',top:(r.top-b.top)+'px',width:r.width+'px',height:r.height+'px'});
+    }
+  }
+  function refresh(){
+    copy=source.cloneNode(true);
+    const original=[source,...source.querySelectorAll('*')];
+    const clones=[copy,...copy.querySelectorAll('*')];
+    const ids=new Map();
+    for(let i=0;i<clones.length;i++){
+      const element=clones[i],style=getComputedStyle(original[i]);
+      for(const property of style)element.style.setProperty(property,style.getPropertyValue(property));
+      element.style.animation='none';element.style.transition='none';
+      if(element.id){const next=prefix+'-copy-'+element.id;ids.set(element.id,next);element.id=next;}
+      for(const attribute of [...element.attributes])if(attribute.name.startsWith('on'))element.removeAttribute(attribute.name);
+      element.removeAttribute('autofocus');
+    }
+    for(const element of clones)for(const attribute of [...element.attributes]){
+      let value=attribute.value;
+      for(const [oldId,newId] of ids){
+        value=value.replaceAll('url(#'+oldId+')','url(#'+newId+')');
+        if(['href','xlink:href'].includes(attribute.name)&&value==='#'+oldId)value='#'+newId;
+      }
+      if(value!==attribute.value)element.setAttribute(attribute.name,value);
+    }
+    for(const property of [...copy.style])if(property.startsWith('inset')||['top','right','bottom','left'].includes(property))copy.style.removeProperty(property);
+    Object.assign(copy.style,{position:'absolute',left:'0',top:'0',margin:'0',boxSizing:'border-box',width:source.getBoundingClientRect().width+'px',height:source.getBoundingClientRect().height+'px',transition:'none',animation:'none',pointerEvents:'none'});
+    // Paint the page backdrop only inside the clipped Safari optical input.
+    // Transparent source wrappers keep their original appearance on the page.
+    backing.style.background=backdrop?getComputedStyle(backdrop).background:getComputedStyle(document.body).backgroundColor;
+    if(!backdrop)Object.assign(backing.style,{inset:'0'});
+    input.replaceChildren(backing,copy);sync();
+  }
+  refresh();
+  new ResizeObserver(refresh).observe(source);
+  const withoutSpotlight=value=>(value||'').replace(/--(?:mx|my|spot-a)\s*:[^;]*;?/g,'').trim();
+  new MutationObserver(records=>{
+    if(records.some(r=>r.type!=='attributes'||r.attributeName!=='style'||withoutSpotlight(r.oldValue)!==withoutSpotlight(r.target.getAttribute('style'))))refresh();
+  }).observe(source,{subtree:true,childList:true,characterData:true,attributes:true,attributeOldValue:true});
+  source.addEventListener('lg:refresh',refresh);
+  source.addEventListener('load',refresh,true);
+  let themeRefresh;
+  document.addEventListener('lg:theme',()=>{
+    refresh();clearTimeout(themeRefresh);
+    // Capture settled computed colors after the canonical 300ms theme fade.
+    themeRefresh=setTimeout(refresh,350);
+  });
+  return sync;
+}
+
 const root=document.documentElement;
-const canRefract=CSS.supports('backdrop-filter','url(#lg-probe)') && 'userAgentData' in navigator;
-if(!canRefract) return;
+const ua=navigator.userAgent;
+const ios=/iPhone|iPad|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const nativePath=!ios&&'userAgentData' in navigator&&CSS.supports('backdrop-filter','url(#lg-probe)');
+const safariPath=/AppleWebKit/.test(ua)&&(/Version\/.*Safari/.test(ua)||ios)&&!nativePath;
+root.dataset.lgPath=nativePath?'native':safariPath?'mirror':'basic';
+if(!nativePath&&!safariPath)return;
+const syncs=[];let frame=0;
+function queueSync(){if(!frame)frame=requestAnimationFrame(()=>{frame=0;syncs.forEach(fn=>fn());root.dataset.mirrorSyncs=String(Number(root.dataset.mirrorSyncs||0)+1);});}
+if(safariPath){document.addEventListener('scroll',queueSync,{capture:true,passive:true});document.addEventListener('lg:move',queueSync);window.addEventListener('resize',queueSync);}
 const svg=svgNode('svg',{width:0,height:0,'aria-hidden':'true',focusable:'false'});
 svg.style.position='absolute';
 const defs=svgNode('defs',{});svg.append(defs);document.body.append(svg);
-root.classList.add('refract');
-document.querySelectorAll('.lg').forEach((glass,index)=>{
+if(nativePath)root.classList.add('refract');
+document.querySelectorAll('.lg:not(.lg--lite)').forEach((glass,index)=>{
+ if(safariPath&&!glass.dataset.lgSource)return;
+ if(safariPath){glass.classList.add('lg-mirrored');syncs.push(installGlassMirror(glass, 'lg-dist-'+index));}
  const filterId='lg-dist-'+index;
 const filter = svgNode('filter',{id:filterId,filterUnits:'userSpaceOnUse',primitiveUnits:'userSpaceOnUse',x:0,y:0,'color-interpolation-filters':'sRGB'});
 const mapImage = svgNode('feImage',{x:0,y:0,preserveAspectRatio:'none',result:'edgeMap'});
@@ -502,30 +606,39 @@ filter.append(
  edgeFadeImage,
  svgNode('feComposite',{in:'edgeWash',in2:'edgeFadeMask',operator:'in',result:'washedEdge'}),
  svgNode('feComposite',{in:'chromaticEdge',in2:'edgeFadeMask',operator:'out',result:'remainingEdge'}),
- svgNode('feComposite',{in:'washedEdge',in2:'remainingEdge',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0}));
+ svgNode('feComposite',{in:'washedEdge',in2:'remainingEdge',operator:'arithmetic',k1:0,k2:1,k3:1,k4:0,result:'opticalResult'}));
 defs.append(filter);
 // All blur radii share the optical band's size adaptation, including edge wash.
 const blurRadii=Array.from(filter.querySelectorAll('feGaussianBlur'),el=>[el,Number(el.getAttribute('stdDeviation'))]);
 glass.style.setProperty('--lg-filter','url(#'+filterId+')');
 
+let mapSize='';
+const mapDensity=Number(glass.dataset.lgMapScale||1);
 function updateMap() {
  const w=glass.clientWidth,h=glass.clientHeight;
+ if(safariPath)Object.assign(glass.querySelector('.lg-mirror-surface').style,{width:w+'px',height:h+'px'});
  if (!w || !h) return; // Closed dialogs are initialized when they become visible.
  const radius=Math.min(parseFloat(getComputedStyle(glass,'::before').borderTopLeftRadius),w/2,h/2);
+ const nextSize=`${w}:${h}:${radius}`;
+ if(nextSize===mapSize)return;
+ mapSize=nextSize;
+ root.dataset.mapBuilds=String(Number(root.dataset.mapBuilds||0)+1);
  // Each edge owns at most 22% of the shortest dimension. Opposite bands
  // stay separated by an unaffected center; large surfaces retain 39.2px.
  const opticalScale=Math.min(1,.22*Math.min(w,h)/39.2);
  const unit=.35*opticalScale;
  const sheet=false;
- const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h;
- const context=canvas.getContext('2d'); const pixels=context.createImageData(w,h);
- const edgePixels=context.createImageData(w,h);
- const fadePixels=context.createImageData(w,h);
- for(let y=0;y<h;y++) for(let x=0;x<w;x++) {
-  const px=x+.5-w/2, py=y+.5-h/2;
+ const mapWidth=w*mapDensity,mapHeight=h*mapDensity;
+ const canvas=document.createElement('canvas'); canvas.width=mapWidth; canvas.height=mapHeight;
+ const context=canvas.getContext('2d'); const pixels=context.createImageData(mapWidth,mapHeight);
+ const edgePixels=context.createImageData(mapWidth,mapHeight);
+ const fadePixels=context.createImageData(mapWidth,mapHeight);
+ for(let y=0;y<mapHeight;y++) for(let x=0;x<mapWidth;x++) {
+  const sampleX=(x+.5)/mapDensity,sampleY=(y+.5)/mapDensity;
+  const px=sampleX-w/2, py=sampleY-h/2;
   const qx=Math.abs(px)-(w/2-radius), qy=Math.abs(py)-(h/2-radius);
   const ox=Math.max(qx,0),oy=Math.max(qy,0), len=Math.hypot(ox,oy);
-  const distance=sheet ? h-y-.5 : -(len+Math.min(Math.max(qx,qy),0)-radius);
+  const distance=sheet ? h-sampleY : -(len+Math.min(Math.max(qx,qy),0)-radius);
   let nx=0,ny=0;
   // A notification sheet has one visible horizontal optical edge.
   // Its offscreen top and viewport sides must not act as a second lens.
@@ -534,7 +647,7 @@ function updateMap() {
   else if(qx>qy) nx=-Math.sign(px); else ny=-Math.sign(py);
   const d=Math.max(0,distance)/unit;
   const shift=(sourceDistance(d)-d)*unit;
-  const index=(y*w+x)*4;
+  const index=(y*mapWidth+x)*4;
   pixels.data[index]=Math.round(128+nx*shift/displacementScale*254);
   pixels.data[index+1]=Math.round(128+ny*shift/displacementScale*254);
   pixels.data[index+2]=Math.round(255*reflectionWeight(d)); pixels.data[index+3]=255;
@@ -546,12 +659,23 @@ function updateMap() {
  }
  context.putImageData(pixels,0,0);
  for (const el of [filter,mapImage,edgeMaskImage,edgeFadeImage]) { el.setAttribute('width',w); el.setAttribute('height',h); }
+ if(safariPath){
+  // Relative bounds keep Safari's CSS filter region and feImage subregions
+  // aligned with the painted pane when page zoom changes.
+  filter.setAttribute('filterUnits','objectBoundingBox');
+  filter.setAttribute('width','1');filter.setAttribute('height','1');
+  for(const image of [mapImage,edgeMaskImage,edgeFadeImage]){image.setAttribute('width','100%');image.setAttribute('height','100%');}
+ }
  mapImage.setAttribute('href',canvas.toDataURL());
  context.putImageData(edgePixels,0,0);
  edgeMaskImage.setAttribute('href',canvas.toDataURL());
  context.putImageData(fadePixels,0,0);
  edgeFadeImage.setAttribute('href',canvas.toDataURL());
  for(const [el,radius] of blurRadii) el.setAttribute('stdDeviation',String(radius*opticalScale));
+ if(safariPath){
+  glass.querySelector('.lg-mirror-surface').style.filter='url(#'+filterId+')';
+  queueSync();
+ }
 
 }
 
@@ -590,7 +714,7 @@ function updateMap() {
  const panel=document.createElement('section');
  panel.id='lgAppearance'; panel.className='lg-appearance'; panel.setAttribute('popover','auto');
  panel.setAttribute('aria-label',title);
- panel.innerHTML='<h2>'+title+'</h2><div class="lg-theme-options"><button type="button" class="lg-chip" data-lg-theme="light">'+light+'</button><button type="button" class="lg-chip" data-lg-theme="dark">'+dark+'</button></div><label for="lgTransparency">'+label+'</label><input id="lgTransparency" type="range" min="40" max="80" value="48">';
+ panel.innerHTML='<h2>'+title+'</h2><div class="lg-theme-options"><button type="button" class="lg-chip" data-lg-theme="light">'+light+'</button><button type="button" class="lg-chip" data-lg-theme="dark">'+dark+'</button></div><label for="lgTransparency">'+label+'</label><input id="lgTransparency" type="range" min="5" max="95" value="40">';
  document.body.append(panel);
  const slider=panel.querySelector('input');
  let customized=false;
@@ -607,15 +731,58 @@ function updateMap() {
  }
  button.addEventListener('click',()=>{panel.togglePopover();if(panel.matches(':popover-open'))place();});
  panel.addEventListener('toggle',()=>button.setAttribute('aria-expanded',String(panel.matches(':popover-open'))));
- panel.querySelectorAll('[data-lg-theme]').forEach(b=>b.addEventListener('click',()=>{root.dataset.theme=b.dataset.lgTheme;syncTheme();}));
+ panel.querySelectorAll('[data-lg-theme]').forEach(b=>b.addEventListener('click',()=>{root.dataset.theme=b.dataset.lgTheme;syncTheme();document.dispatchEvent(new Event('lg:theme'));}));
  slider.addEventListener('input',()=>{customized=true;root.style.setProperty('--lg-tint-a',String(1-Number(slider.value)/100));});
  document.addEventListener('keydown',e=>{if(e.key==='Escape' && panel.matches(':popover-open')){panel.hidePopover();button.focus();e.preventDefault();}});
  panel.addEventListener('focusout',e=>{if(e.relatedTarget && !panel.contains(e.relatedTarget) && e.relatedTarget!==button)panel.hidePopover();});
  window.addEventListener('resize',()=>{if(panel.matches(':popover-open'))place();});
  document.addEventListener('scroll',()=>{if(panel.matches(':popover-open'))place();},true);
- matchMedia('(prefers-color-scheme:dark)').addEventListener('change',syncTheme);
+ matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{syncTheme();document.dispatchEvent(new Event('lg:theme'));});
 })();
 
+/* Optional shared selection; links keep keyboard and navigation semantics. */
+(function () {
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+ document.querySelectorAll('[data-lg-nav]').forEach(nav=>{
+  const source=nav.querySelector('.lg-nav-items'), lens=nav.querySelector('.lg-selection');
+  const links=[...source.querySelectorAll('a[href^="#"]')];
+  const targets=links.map(a=>document.querySelector(a.getAttribute('href')));
+  let selected=0,drag=null,scrollFrame=0,scrolling=false;
+  function moved(){document.dispatchEvent(new Event('lg:move'));}
+  function box(i){const a=links[i].getBoundingClientRect(),n=nav.getBoundingClientRect();return{x:a.left-n.left-nav.clientLeft-3,y:a.top-n.top-nav.clientTop-3,w:a.width+6,h:a.height+6};}
+  function place(i){const b=box(i);Object.assign(lens.style,{width:b.w+'px',height:b.h+'px',transform:`translate(${b.x}px,${b.y}px)`});moved();}
+  function mark(i){selected=i;links.forEach((a,j)=>j===i?a.setAttribute('aria-current','location'):a.removeAttribute('aria-current'));place(i);}
+  function stopScroll(){cancelAnimationFrame(scrollFrame);scrollFrame=0;scrolling=false;}
+  function go(i){
+   stopScroll();mark(i);
+   const start=scrollY,top=Math.max(0,Math.min(document.documentElement.scrollHeight-innerHeight,targets[i].getBoundingClientRect().top+start-nav.offsetHeight-24));
+   if(reduced.matches){window.scrollTo({top,behavior:'instant'});return;}
+   scrolling=true;const began=performance.now();
+   function step(now){const t=Math.min(1,(now-began)/350);window.scrollTo({top:start+(top-start)*(1-Math.pow(1-t,3)),behavior:'instant'});if(t<1)scrollFrame=requestAnimationFrame(step);else{scrolling=false;scrollFrame=0;}}
+   scrollFrame=requestAnimationFrame(step);
+  }
+  links.forEach((a,i)=>a.addEventListener('click',e=>{e.preventDefault();go(i);}));
+  lens.addEventListener('pointerdown',e=>{
+   if(!e.isPrimary||e.button!==0)return;
+   stopScroll();const first=box(0),last=box(links.length-1),axis=Math.abs(last.y-first.y)>Math.abs(last.x-first.x)?'y':'x';
+   drag={id:e.pointerId,axis,start:axis==='x'?e.clientX:e.clientY,box:box(selected),target:selected};lens.setPointerCapture(e.pointerId);
+  });
+  lens.addEventListener('pointermove',e=>{
+   if(!drag||drag.id!==e.pointerId)return;
+   e.preventDefault();const a=drag.axis,d=(a==='x'?e.clientX:e.clientY)-drag.start;
+   const position=Math.max(box(0)[a],Math.min(box(links.length-1)[a],drag.box[a]+d));
+   drag.target=links.map((_,i)=>i).reduce((x,y)=>Math.abs(box(x)[a]-position)<Math.abs(box(y)[a]-position)?x:y);
+   lens.style.transform=`translate(${a==='x'?position:drag.box.x}px,${a==='y'?position:drag.box.y}px)`;moved();
+  });
+  function end(commit){if(!drag)return;const state=drag;drag=null;if(lens.hasPointerCapture(state.id))lens.releasePointerCapture(state.id);if(commit)go(state.target);else place(selected);}
+  lens.addEventListener('pointerup',()=>end(true));lens.addEventListener('pointercancel',()=>end(false));lens.addEventListener('lostpointercapture',()=>end(false));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){end(false);stopScroll();}else if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(e.key))stopScroll();});
+  window.addEventListener('wheel',stopScroll,{passive:true});window.addEventListener('touchstart',stopScroll,{passive:true});
+  window.addEventListener('scroll',()=>{if(scrolling||drag)return;let i=0;targets.forEach((target,j)=>{if(target.getBoundingClientRect().top<=nav.offsetHeight+40)i=j;});if(i!==selected)mark(i);},{passive:true});
+  new ResizeObserver(()=>{end(false);place(selected);}).observe(source);
+  mark(0);
+ });
+})();
 </script>
 
   <script>

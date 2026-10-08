@@ -3,7 +3,7 @@
 [中文说明](README.zh-CN.md) · [Live examples](https://voyhuang.github.io/liquid-glass-web/) · [Install](#install)
 
 A standalone, Codex-first [Agent Skill](https://agentskills.io/specification)
-for Liquid Glass web interfaces. **v0.1.1** brings size-aware edge refraction,
+for Liquid Glass web interfaces. **v0.1.2** brings dual-path edge refraction,
 soft folded reflections, local color dispersion, and clear centers without
 whole-pane Gaussian blur. No npm package, Plugin, CDN, or build step.
 
@@ -12,32 +12,34 @@ whole-pane Gaussian blur. No npm package, Plugin, CDN, or build step.
 [Open the four examples](https://voyhuang.github.io/liquid-glass-web/).
 Pages serves the same single-file HTML examples that ship inside the skill.
 
-## What's new in v0.1.1
+## What's new in v0.1.2
 
-- Edge-distance refraction replaces whole-surface noise distortion.
-- All four edges and rounded corners share the same optical profile.
-- Smaller panes scale displacement, reflection blur, dispersion, and edge fade
-  together; large panes retain a 39.2px optical band and a 10px edge treatment.
-- Reflections use gentle symmetric ghost samples and localized blur.
-- No global glass blur, including the non-Chromium fallback.
-- The appearance button opens a menu with Light/Dark controls and a 40–80%
+- Native backdrop optics on Chromium; declared-source copies on Safari.
+- Lightweight bottom-layer containers and one draggable glass navigation selection.
+- 2× optical maps for large floating surfaces that cover text or graphics;
+  compact surfaces retain 1× maps.
+- Clear centers, shared edge optics, neutral saturation/brightness, and 0.5px borders.
+- Dark border/top-highlight alpha: 0.10 / 0.20; overlay transparency stays at 90%.
+- The appearance button opens a menu with Light/Dark controls and a 5–95% (40% initial)
   tint-transparency slider. No numeric readout or helper text.
 
 ## Install
 
+The installation below is pinned to the v0.1.2 preview release.
+
 Ask Codex:
 
 ```text
-Use $skill-installer to install https://github.com/voyhuang/liquid-glass-web/tree/v0.1.1/skills/liquid-glass-web
+Use $skill-installer to install https://github.com/voyhuang/liquid-glass-web/tree/v0.1.2/skills/liquid-glass-web
 ```
 
-Use `main` instead of `v0.1.1` to follow development. Restart Codex if the skill
+Use `main` instead of `v0.1.2` to follow development. Restart Codex if the skill
 does not appear immediately. Invoke it with `$liquid-glass-web`.
 
 For manual installation:
 
 ```sh
-git clone --depth 1 --branch v0.1.1 https://github.com/voyhuang/liquid-glass-web.git
+git clone --depth 1 --branch v0.1.2 https://github.com/voyhuang/liquid-glass-web.git
 mkdir -p ~/.codex/skills
 cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 ```
@@ -49,13 +51,14 @@ repository root.
 ## Quick use
 
 1. Copy [glass.css](skills/liquid-glass-web/assets/glass.css) into a style block.
-2. Add `.lg` to a few floating surfaces, using `.lg-chip` for controls inside.
+2. Use `.lg` for floating surfaces, `.lg--lite` for bottom-layer content,
+   and `data-lg-source` for Safari background regions.
 3. Copy [refraction-snippet.html](skills/liquid-glass-web/assets/refraction-snippet.html)
    once near the end of the body, before application scripts.
 4. Put page-specific CSS after the canonical stylesheet.
 
 ```html
-<article class="lg lg--thick lg-materialize">
+<article class="lg lg--lite">
   <h1>A clear surface</h1>
   <button id="themeToggle" class="lg-chip" type="button"
           aria-label="Appearance">◐</button>
@@ -71,6 +74,11 @@ values persist through theme changes, not reloads. Omit the trigger to omit the 
 | Interface | Purpose |
 |---|---|
 | `.lg` | Tint, size-aware edge optics, rim and spotlight |
+| `.lg--lite`, `.lg--overlay` | Lightweight content / fixed-90%-transparent selection |
+| `data-lg-source` | Declared Safari background source selector |
+| `data-lg-map-scale="2"` | 2× maps for large content-overlapping surfaces |
+| `data-lg-nav` | Optional shared draggable navigation; see component reference |
+| `--lg-border-width` | 0.5px frame and concentric inner-radius inset |
 | `.lg--thick`, `.lg--thin` | Surface hierarchy and shadow, not blur strength |
 | `.lg-materialize` | Entrance; stagger with `--enter-delay` |
 | `.lg-chip`, `.lg-cta` | Non-glass controls and accent variant |
@@ -101,10 +109,12 @@ The optical study used during development is not a fifth published example.
 
 ## Browser fallbacks
 
-Policy for v0.1.1 (2026-10-06): Chromium receives SVG backdrop refraction through
-a conservative runtime gate. Safari/Firefox retain translucent tint and rim
-lighting **without whole-pane blur**. This policy is not a fresh cross-engine
-certification; engine support can change. The optional menu uses native popovers.
+Candidate policy (2026-10-08): verified desktop Chromium uses native SVG backdrop
+filters; Safari uses ordinary SVG filters on bounded, inert copies of declared
+HTML sources. Other environments and Safari surfaces without a source retain
+the clear tinted material. The menu uses native popovers. Source limitations,
+events, and verification scope are centralized in the
+[component reference](skills/liquid-glass-web/references/components.md#browser-paths-and-source-scope).
 
 The ladder is **edge refraction → clear tinted surface → solid accessibility
 surface**. Reduced transparency, increased contrast, forced colors, and print
@@ -112,7 +122,8 @@ override the material. Media-query support varies by browser.
 
 ## Accessibility and performance
 
-Keep five panes or fewer per view and avoid glass-on-glass. Preserve visible
+Use lightweight material for large reading containers and one shared overlay
+for navigation. Keep the number of full optical panes small. Preserve visible
 focus, accessible names, and contrast over busy backgrounds. The menu supports
 Escape and outside-click dismissal; the slider retains native keyboard access.
 
@@ -120,6 +131,9 @@ Maps update on pane resize, not scroll or cursor movement. Each pane has a
 distinct filter; closed dialogs initialize when visible. The optical band is
 capped at 22% of the shorter dimension so opposite edges stay separated.
 Reduced motion stops decorative motion. Print flattens surfaces.
+2× maps use four times the map pixels; they leave rendered pane dimensions
+unchanged. Safari sources refresh for content/size/theme changes and synchronize
+position during scroll and drag.
 
 ## Troubleshooting
 

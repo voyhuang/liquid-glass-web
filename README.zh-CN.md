@@ -3,7 +3,7 @@
 [English](README.md) · [在线案例](https://voyhuang.github.io/liquid-glass-web/) · [安装](#安装)
 
 面向 Codex、符合 [Agent Skills 规范](https://agentskills.io/specification)的独立
-Liquid Glass 网页技能。**v0.1.1** 提供按尺寸适配的边缘折射、柔和倒影、局部色散，
+Liquid Glass 网页技能。**v0.1.2** 提供双路径边缘折射、柔和倒影、局部色散，
 玻璃中央不使用整体高斯模糊。不发布 npm 包或 Plugin，不依赖 CDN，没有构建步骤。
 中英文说明保持对应，技术表述以英文为准。
 
@@ -12,31 +12,32 @@ Liquid Glass 网页技能。**v0.1.1** 提供按尺寸适配的边缘折射、�
 [打开四个案例](https://voyhuang.github.io/liquid-glass-web/)。
 Pages 直接展示随 skill 一起安装的单文件 HTML 案例。
 
-## v0.1.1 更新
+## v0.1.2 更新
 
-- 用边缘距离驱动的折射替代整片随机噪声扭曲。
-- 四边及圆角使用同一套光学曲线。
-- 小型面板的位移、倒影模糊、色散与渐隐共同缩放；大面板保留 39.2px
-  形变带及 10px 贴边处理范围。
-- 倒影采用轻微对称重影与局部模糊。
-- 移除整体玻璃模糊，非 Chromium 降级也不保留整体磨砂。
-- 外观按钮展开明暗切换和 40%–80% 底色透明度滑块，不显示数值或说明句。
+- Chromium 使用原生背景光学路径，Safari 使用声明区域的视觉副本。
+- 底层正文使用轻量材质，导航采用一个可拖动的共享玻璃选中层。
+- 会遮盖文字或图形的大浮层使用 2× 光学贴图，紧凑表面保留 1×。
+- 保留清晰中心与统一边缘光学；中性饱和度／亮度，边框 0.5px。
+- 深色边框／顶部高光不透明度为 0.10／0.20，上层玻璃透明度固定 90%。
+- 外观按钮展开明暗切换和 5%–95% 底色透明度滑块（默认 40%），不显示数值或说明句。
 
 ## 安装
+
+以下安装命令固定使用 v0.1.2 预览版。
 
 让 Codex 执行：
 
 ```text
-Use $skill-installer to install https://github.com/voyhuang/liquid-glass-web/tree/v0.1.1/skills/liquid-glass-web
+Use $skill-installer to install https://github.com/voyhuang/liquid-glass-web/tree/v0.1.2/skills/liquid-glass-web
 ```
 
-把 `v0.1.1` 换成 `main` 可跟随开发分支。技能未立即出现时重启 Codex，
+把 `v0.1.2` 换成 `main` 可跟随开发分支。技能未立即出现时重启 Codex，
 使用 `$liquid-glass-web` 调用。
 
 手动安装：
 
 ```sh
-git clone --depth 1 --branch v0.1.1 https://github.com/voyhuang/liquid-glass-web.git
+git clone --depth 1 --branch v0.1.2 https://github.com/voyhuang/liquid-glass-web.git
 mkdir -p ~/.codex/skills
 cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 ```
@@ -47,13 +48,13 @@ cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 ## 快速使用
 
 1. 将 [glass.css](skills/liquid-glass-web/assets/glass.css) 完整内嵌到样式块。
-2. 给少量浮动表面添加 `.lg`，内部控件使用 `.lg-chip`。
+2. 浮动表面使用 `.lg`，底层正文使用 `.lg--lite`，通过 `data-lg-source` 声明 Safari 背景源。
 3. 将 [refraction-snippet.html](skills/liquid-glass-web/assets/refraction-snippet.html)
    完整复制一次到 body 末尾、业务脚本之前。
 4. 页面专属 CSS 放在 canonical 样式之后。
 
 ```html
-<article class="lg lg--thick lg-materialize">
+<article class="lg lg--lite">
   <h1>A clear surface</h1>
   <button id="themeToggle" class="lg-chip" type="button"
           aria-label="Appearance">◐</button>
@@ -69,6 +70,11 @@ cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 | 接口 | 用途 |
 |---|---|
 | `.lg` | 底色、尺寸适配边缘光学、边缘光与光标高光 |
+| `.lg--lite`、`.lg--overlay` | 轻量正文／固定 90% 透明度的选中层 |
+| `data-lg-source` | Safari 声明背景源的选择器 |
+| `data-lg-map-scale="2"` | 用于覆盖具体内容的大浮层的 2× 贴图 |
+| `data-lg-nav` | 可选共享拖动导航，详见组件参考 |
+| `--lg-border-width` | 0.5px 边框及同心内圆角缩进 |
 | `.lg--thick`、`.lg--thin` | 层级与阴影，不是模糊强度 |
 | `.lg-materialize` | 入场；通过 `--enter-delay` 错峰 |
 | `.lg-chip`、`.lg-cta` | 非玻璃控件及强调色变体 |
@@ -98,22 +104,25 @@ cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 
 ## 浏览器降级
 
-v0.1.1 的实现策略（2026-10-06）：通过保守运行时检查，让 Chromium 使用 SVG
-背景折射。Safari/Firefox 保留半透明底色与边缘光，**不使用整体模糊**。
-这是实现策略，不代表新一轮跨引擎认证；浏览器能力会变化。可选外观菜单使用
-原生 popover。
+渲染策略（2026-10-08）：已验证的桌面 Chromium 使用原生 SVG 背景滤镜；
+Safari 对声明的 HTML 源建立限定区域、不可交互的视觉副本并使用普通 SVG 滤镜。
+其他环境和未声明背景源的 Safari 表面保留清晰半透明材质。外观菜单使用原生 popover。
+背景源约束、刷新事件和核验范围集中见
+[组件参考](skills/liquid-glass-web/references/components.md#browser-paths-and-source-scope)。
 
 降级阶梯为：**边缘折射 → 清晰半透明表面 → 无障碍实色表面**。
 降低透明度、提高对比度、强制色彩和打印样式覆盖材质；媒体查询支持因浏览器而异。
 
 ## 无障碍与性能
 
-每视图不超过五个 pane，避免玻璃套玻璃。保留可见焦点、控件名称和繁忙背景上的
+大面积正文使用轻量材质，导航使用单个共享选中层，控制完整光学面板数量。保留可见焦点、控件名称和繁忙背景上的
 文字对比度。菜单支持 Escape、点击外部关闭，滑块保留原生键盘操作。
 
 贴图随面板尺寸变化更新，不在滚动或光标移动时重建。每个面板有独立滤镜，
 隐藏 dialog 在显示后初始化。每侧光学范围最多占最短边的 22%，避免相向边缘
 挤占中央。减少动态效果时停止装饰动画，打印时表面实色化。
+2× 贴图的像素数量为四倍，面板显示尺寸保持不变。Safari 副本在内容、尺寸或主题变化时刷新，
+滚动与拖动时同步位置。
 
 ## 常见故障
 
