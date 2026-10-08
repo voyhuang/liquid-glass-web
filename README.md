@@ -4,8 +4,7 @@
 
 A standalone, Codex-first [Agent Skill](https://agentskills.io/specification)
 for Liquid Glass web interfaces. **v0.1.2** brings dual-path edge refraction,
-soft folded reflections, local color dispersion, and clear centers without
-whole-pane Gaussian blur. No npm package, Plugin, CDN, or build step.
+soft folded reflections, and local color dispersion.
 
 ## Preview
 
@@ -19,9 +18,9 @@ Pages serves the same single-file HTML examples that ship inside the skill.
 - 2× optical maps for large floating surfaces that cover text or graphics;
   compact surfaces retain 1× maps.
 - Clear centers, shared edge optics, neutral saturation/brightness, and 0.5px borders.
-- Dark border/top-highlight alpha: 0.10 / 0.20; overlay transparency stays at 90%.
+- Overlay transparency stays at 90%.
 - The appearance button opens a menu with Light/Dark controls and a 5–95% (40% initial)
-  tint-transparency slider. No numeric readout or helper text.
+  tint-transparency slider.
 
 ## Install
 
