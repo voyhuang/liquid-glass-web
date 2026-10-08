@@ -85,7 +85,10 @@ are siblings inside the nav. Keep the source wrapper transparent.
 
 The snippet initializes `[data-lg-nav]` at load. Links point to existing sections.
 Pointer capture maintains direct dragging; release selects the nearest item and
-scrolls to its section. Clicks and natural scrolling share the selected state.
+scrolls to its section. A nonzero `scroll-margin-top` on the target sets its
+landing offset. Otherwise horizontal navigation reserves its height plus 24px,
+and vertical navigation reserves 24px. Clicks, drag releases, and natural
+scrolling use the same section positions.
 Wheel, touch, navigation keys, and Escape interrupt programmatic scrolling.
 Escape cancels a held drag; keyboard users operate the original links.
 Reduced motion positions immediately. Orientation follows measured link positions;

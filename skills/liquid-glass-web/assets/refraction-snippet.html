@@ -305,18 +305,24 @@ function updateMap() {
 (function () {
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
  document.querySelectorAll('[data-lg-nav]').forEach(nav=>{
-  const source=nav.querySelector('.lg-nav-items'), lens=nav.querySelector('.lg-selection');
+  const source=nav.querySelector(':scope > .lg-nav-items'), lens=nav.querySelector(':scope > .lg-selection');
   const links=[...source.querySelectorAll('a[href^="#"]')];
   const targets=links.map(a=>document.querySelector(a.getAttribute('href')));
   let selected=0,drag=null,scrollFrame=0,scrolling=false;
   function moved(){document.dispatchEvent(new Event('lg:move'));}
   function box(i){const a=links[i].getBoundingClientRect(),n=nav.getBoundingClientRect();return{x:a.left-n.left-nav.clientLeft-3,y:a.top-n.top-nav.clientTop-3,w:a.width+6,h:a.height+6};}
+  function axis(){const first=box(0),last=box(links.length-1);return Math.abs(last.y-first.y)>Math.abs(last.x-first.x)?'y':'x';}
+  function destination(i){
+   const margin=parseFloat(getComputedStyle(targets[i]).scrollMarginTop);
+   const offset=margin || (axis()==='y'?24:nav.offsetHeight+24);
+   return Math.max(0,Math.min(document.documentElement.scrollHeight-innerHeight,targets[i].getBoundingClientRect().top+scrollY-offset));
+  }
   function place(i){const b=box(i);Object.assign(lens.style,{width:b.w+'px',height:b.h+'px',transform:`translate(${b.x}px,${b.y}px)`});moved();}
   function mark(i){selected=i;links.forEach((a,j)=>j===i?a.setAttribute('aria-current','location'):a.removeAttribute('aria-current'));place(i);}
   function stopScroll(){cancelAnimationFrame(scrollFrame);scrollFrame=0;scrolling=false;}
   function go(i){
    stopScroll();mark(i);
-   const start=scrollY,top=Math.max(0,Math.min(document.documentElement.scrollHeight-innerHeight,targets[i].getBoundingClientRect().top+start-nav.offsetHeight-24));
+   const start=scrollY,top=destination(i);
    if(reduced.matches){window.scrollTo({top,behavior:'instant'});return;}
    scrolling=true;const began=performance.now();
    function step(now){const t=Math.min(1,(now-began)/350);window.scrollTo({top:start+(top-start)*(1-Math.pow(1-t,3)),behavior:'instant'});if(t<1)scrollFrame=requestAnimationFrame(step);else{scrolling=false;scrollFrame=0;}}
@@ -325,8 +331,8 @@ function updateMap() {
   links.forEach((a,i)=>a.addEventListener('click',e=>{e.preventDefault();go(i);}));
   lens.addEventListener('pointerdown',e=>{
    if(!e.isPrimary||e.button!==0)return;
-   stopScroll();const first=box(0),last=box(links.length-1),axis=Math.abs(last.y-first.y)>Math.abs(last.x-first.x)?'y':'x';
-   drag={id:e.pointerId,axis,start:axis==='x'?e.clientX:e.clientY,box:box(selected),target:selected};lens.setPointerCapture(e.pointerId);
+   stopScroll();const direction=axis();
+   drag={id:e.pointerId,axis:direction,start:direction==='x'?e.clientX:e.clientY,box:box(selected),target:selected};lens.setPointerCapture(e.pointerId);
   });
   lens.addEventListener('pointermove',e=>{
    if(!drag||drag.id!==e.pointerId)return;
@@ -339,7 +345,7 @@ function updateMap() {
   lens.addEventListener('pointerup',()=>end(true));lens.addEventListener('pointercancel',()=>end(false));lens.addEventListener('lostpointercapture',()=>end(false));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){end(false);stopScroll();}else if(['ArrowDown','ArrowUp','PageDown','PageUp','Home','End',' '].includes(e.key))stopScroll();});
   window.addEventListener('wheel',stopScroll,{passive:true});window.addEventListener('touchstart',stopScroll,{passive:true});
-  window.addEventListener('scroll',()=>{if(scrolling||drag)return;let i=0;targets.forEach((target,j)=>{if(target.getBoundingClientRect().top<=nav.offsetHeight+40)i=j;});if(i!==selected)mark(i);},{passive:true});
+  window.addEventListener('scroll',()=>{if(scrolling||drag)return;let i=0;targets.forEach((_,j)=>{if(destination(j)<=scrollY+2)i=j;});if(i!==selected)mark(i);},{passive:true});
   new ResizeObserver(()=>{end(false);place(selected);}).observe(source);
   mark(0);
  });
