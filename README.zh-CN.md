@@ -3,8 +3,7 @@
 [English](README.md) · [在线案例](https://voyhuang.github.io/liquid-glass-web/) · [安装](#安装)
 
 面向 Codex、符合 [Agent Skills 规范](https://agentskills.io/specification)的独立
-Liquid Glass 网页技能。**v0.1.2** 提供双路径边缘折射、柔和倒影、局部色散，
-玻璃中央不使用整体高斯模糊。不发布 npm 包或 Plugin，不依赖 CDN，没有构建步骤。
+Liquid Glass 网页技能。**v0.1.2** 提供双路径边缘折射、柔和倒影、局部色散。
 中英文说明保持对应，技术表述以英文为准。
 
 ## 效果预览
@@ -18,8 +17,8 @@ Pages 直接展示随 skill 一起安装的单文件 HTML 案例。
 - 底层正文使用轻量材质，导航采用一个可拖动的共享玻璃选中层。
 - 会遮盖文字或图形的大浮层使用 2× 光学贴图，紧凑表面保留 1×。
 - 保留清晰中心与统一边缘光学；中性饱和度／亮度，边框 0.5px。
-- 深色边框／顶部高光不透明度为 0.10／0.20，上层玻璃透明度固定 90%。
-- 外观按钮展开明暗切换和 5%–95% 底色透明度滑块（默认 40%），不显示数值或说明句。
+- 上层玻璃透明度固定 90%。
+- 外观按钮展开明暗切换和 5%–95% 底色透明度滑块（默认 40%）。
 
 ## 安装
 
@@ -100,7 +99,6 @@ cp -R liquid-glass-web/skills/liquid-glass-web ~/.codex/skills/liquid-glass-web
 | [Résumé / Portfolio](skills/liquid-glass-web/references/example-resume.html) | 吸顶导航、响应式布局、打印 | [打开](https://voyhuang.github.io/liquid-glass-web/skills/liquid-glass-web/references/example-resume.html) |
 
 四个案例均逐字内嵌 canonical CSS 和 snippet，可离线打开。
-调校期间使用的光学小样不作为第五个公开案例发布。
 
 ## 浏览器降级
 
